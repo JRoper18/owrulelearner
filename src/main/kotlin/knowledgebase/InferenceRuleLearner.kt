@@ -1,6 +1,7 @@
 package main.kotlin.knowledgebase
 
 import net.sf.tweety.commons.Formula
+import java.util.*
 
 class InferenceRuleLearner(val config : InferenceRuleLearnerConfig, val rules : Set<InferenceRule>){
 	fun findRules(instances : Set<Instance>) : Set<InferenceRule>{
@@ -23,15 +24,35 @@ class InferenceRuleLearner(val config : InferenceRuleLearnerConfig, val rules : 
 		return generatedRules.toSet()
 	}
 	fun testRule(ruleFormula : Formula, instances : Set<Instance>) : Set<ConfidenceInterval> {
-		val toReturn = mutableSetOf<ConfidenceInterval>()
+		var toReturn = mutableSetOf<ConfidenceInterval>(ConfidenceInterval(0.0, 0.0, 0.0))
 		for(instance in instances){
+			println(toReturn)
+			val newIntervals = mutableSetOf<ConfidenceInterval>()
 			val intervals = instance.infer(ruleFormula, rules, config.inferenceDepth)
 			intervals.forEach { rulesUsed, interval ->
 				if(config.filter(interval)){
-					toReturn.add(interval)
+					for(previousInter in toReturn){
+						newIntervals.add(interval.add(previousInter))
+					}
+				}
+			}
+			toReturn = newIntervals
+		}
+		if(config.sorting == null){
+			return toReturn.toSet()
+		}
+		val sorted = TreeSet<ConfidenceInterval>(config.sorting)
+		if(config.maxItems > 0){
+			toReturn.forEach {
+				sorted.add(it)
+				if(sorted.size > config.maxItems){
+					sorted.remove(sorted.first())
 				}
 			}
 		}
-		return toReturn.toSet()
+		else {
+			sorted.addAll(toReturn)
+		}
+		return sorted
 	}
 }

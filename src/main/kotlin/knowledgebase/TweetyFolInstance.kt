@@ -1,6 +1,8 @@
 package main.kotlin.knowledgebase
 
+import net.sf.tweety.commons.BeliefBase
 import net.sf.tweety.commons.Formula
+import net.sf.tweety.commons.Parser
 import net.sf.tweety.logics.commons.syntax.Constant
 import net.sf.tweety.logics.fol.parser.FolParser
 import net.sf.tweety.logics.fol.syntax.*
@@ -14,7 +16,7 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 		if (inferenceDepth == 0 || rawTruth != TruthValue.UNKNOWN) {
 			return mapOf(Pair(setOf(), rawTruth.toConfidenceMeasure(1.0)))
 		}
-		var possibleIntervals = mutableMapOf<Set<InferenceRule>, ConfidenceInterval>()
+		var possibleIntervals = mutableMapOf<Set<InferenceRule>, ConfidenceInterval>(Pair(setOf(), ConfidenceInterval(0.0, 0.0, 1.0)))
 		//It's unknown. Time for inference!
 		for (rule in rules) {
 			//Pretend the rule is true (if correlation > 0) or false (if correlation < 0)
@@ -232,6 +234,10 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 			return TruthValue.UNKNOWN
 		}
 		return TruthValue.TRUE
+	}
+
+	fun query(queryStr : String) : TruthValue{
+		return query(parser.parseFormula(queryStr))
 	}
 	override fun objects(): Set<String> {
 		return parser.signature.constants.map {

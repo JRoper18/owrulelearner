@@ -16,6 +16,9 @@ data class ConfidenceInterval(val positive : Double, val negative : Double, val 
 	fun normalize() : ConfidenceInterval {
 		return normalize(1.0)
 	}
+	fun add(interval : ConfidenceInterval) : ConfidenceInterval{
+		return ConfidenceInterval(positive + interval.positive, negative + interval.negative, total + interval.total)
+	}
 	/**
 	 *	Returns a truth-value simplification of this confidence measure.
 	 *	Skepticism is the minimum amount of correlation needed

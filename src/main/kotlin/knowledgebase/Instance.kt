@@ -1,6 +1,8 @@
 package main.kotlin.knowledgebase
 
+import net.sf.tweety.commons.BeliefBase
 import net.sf.tweety.commons.Formula
+import net.sf.tweety.commons.Parser
 
 interface Instance {
 	fun objects() : Set<String>
