@@ -5,7 +5,7 @@ data class ConfidenceInterval(val positive : Double, val negative : Double, val 
 		return (positive - negative) / total
 	}
 	fun evidence() : Double {
-		return total
+		return positive + negative
 	}
 	fun scale(scalar : Double) : ConfidenceInterval{
 		return ConfidenceInterval(positive * scalar, negative * scalar, total * scalar)
