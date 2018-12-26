@@ -26,7 +26,6 @@ class InferenceRuleLearner(val config : InferenceRuleLearnerConfig, val rules : 
 	fun testRule(ruleFormula : Formula, instances : Set<Instance>) : Set<ConfidenceInterval> {
 		var toReturn = mutableSetOf<ConfidenceInterval>(ConfidenceInterval(0.0, 0.0, 0.0))
 		for(instance in instances){
-			println(toReturn)
 			val newIntervals = mutableSetOf<ConfidenceInterval>()
 			val intervals = instance.infer(ruleFormula, rules, config.inferenceDepth)
 			intervals.forEach { rulesUsed, interval ->

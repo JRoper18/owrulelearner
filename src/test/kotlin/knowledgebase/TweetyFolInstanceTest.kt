@@ -1,4 +1,4 @@
-package test.java.knowledgebase
+package test.kotlin.knowledgebase
 
 import main.kotlin.knowledgebase.TruthValue
 import main.kotlin.knowledgebase.TweetyFolInstance
@@ -52,7 +52,7 @@ internal class TweetyFolInstanceTest {
 		assertEquals(TruthValue.UNKNOWN, i3.query("exists X: (!isRed(X))"))
 
 
-		//HOW DO WE DO THIS, IT RETURNS UNKNOWN: assertEquals(TruthValue.TRUE, i2.query("isRed(banana) || !isRed(banana)"))
+		assertEquals(TruthValue.TRUE, i3.query("isRed(banana) || !isRed(banana)")) //Should still detect logical "obviousness"
 	}
 
 	@Test

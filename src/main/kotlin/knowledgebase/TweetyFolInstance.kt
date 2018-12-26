@@ -5,11 +5,14 @@ import net.sf.tweety.commons.Formula
 import net.sf.tweety.commons.Parser
 import net.sf.tweety.logics.commons.syntax.Constant
 import net.sf.tweety.logics.fol.parser.FolParser
+import net.sf.tweety.logics.fol.reasoner.FolReasoner
+import net.sf.tweety.logics.fol.reasoner.NaiveFolReasoner
 import net.sf.tweety.logics.fol.syntax.*
 
 class TweetyFolInstance(val parser : FolParser) : Instance {
-	val positives = mutableSetOf<FolFormula>()
-	val negatives = mutableSetOf<FolFormula>()
+	private val positives = mutableSetOf<FolFormula>()
+	private val negatives = mutableSetOf<FolFormula>()
+	private val beliefSet = FolBeliefSet()
 	override fun infer(query : Formula, rules : Set<InferenceRule>, inferenceDepth : Int): Map<Set<InferenceRule>, ConfidenceInterval> {
 		val rawTruth = this.query(query)
 		//If we aren't inferring or we know the answer, just return the raw truth value
@@ -56,6 +59,12 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 			throw IllegalArgumentException("The given formula $f is not well-formed.")
 		if (!f.isClosed)
 			throw IllegalArgumentException("The given formula $f is not closed.")
+		//First try to reason with the CWA
+		val cwaQuery = NaiveFolReasoner().query(beliefSet, f)
+		if(cwaQuery){
+			return TruthValue.TRUE
+		}
+		//False under CWA, but could be unknown without it. Check:
 		return satisfies(query)
 	}
 	fun satisfies(formula: FolFormula?): TruthValue {
@@ -256,9 +265,11 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 		}
 		else{
 			if(positive){
+				beliefSet.add(formula)
 				positives.add(formula)
 			}
 			else {
+				beliefSet.add(Negation(formula))
 				negatives.add(formula)
 			}
 		}
