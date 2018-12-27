@@ -3,7 +3,7 @@ package main.kotlin.knowledgebase
 import net.sf.tweety.commons.Formula
 import java.util.*
 
-class InferenceRuleLearner(val config : InferenceRuleLearnerConfig, val rules : Set<InferenceRule>){
+class InferenceRuleLearner(val config : InferenceRuleLearnerConfig, val rules : Set<InferenceRule> = setOf()){
 	fun findRules(instances : Set<Instance>) : Set<InferenceRule>{
 		//First, we need to generate the rules we want to check.
 		val possibleRules = mutableSetOf<Formula>()

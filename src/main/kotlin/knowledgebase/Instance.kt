@@ -15,5 +15,9 @@ interface Instance {
 	 * @return A mapping from which inference rules used to the resulting confidence interval.
 	 */
 	fun infer(query : Formula, rules : Set<InferenceRule>, inferenceDepth : Int) :  Map<Set<InferenceRule>, ConfidenceInterval>
+
+	/**
+	 * Returns the number of times a query is satisfied, dissatisfied, and left unknown in an instance.
+	 */
 	fun count(query : Formula) : ConfidenceInterval
 }

@@ -32,10 +32,16 @@ internal class InferenceRuleLearnerTest {
 		i3.addFormulas(setOf(f3, f4))
 		val i4 = TweetyFolInstance(parser)
 		i4.addFormulas(setOf(f2, f3, f4))
+		val i5 = TweetyFolInstance(parser)
+		i5.addFormulas(setOf(f1, f2))
+		val i6 = TweetyFolInstance(parser)
+		i6.addFormulas(setOf(f1))
 		val config = InferenceRuleLearnerConfig(sorting = Comparator { o1, o2 -> o1.evidence().compareTo(o2.evidence()) })
 		val learner = InferenceRuleLearner(config, setOf<InferenceRule>())
 		assertEquals(setOf(ConfidenceInterval(2, 0, 4)), learner.testRule(parser.parseFormula("forall X: (isApple(X) => isRed(X))"), setOf(i1, i2, i3, i4)))
 		assertEquals(setOf(ConfidenceInterval(1, 0, 3)), learner.testRule(parser.parseFormula("forall X: (isApple(X) => isRed(X))"), setOf(i2, i3, i4)))
 		assertEquals(setOf(ConfidenceInterval(2, 0, 2)), learner.testRule(parser.parseFormula("forall X: (isApple(X) => isRed(X))"), setOf(i1, i2)))
+		assertEquals(setOf(ConfidenceInterval(0, 0, 2)), learner.testRule(parser.parseFormula("forall X: (isApple(X) => isRed(X))"), setOf(i5)))
+		assertEquals(setOf(ConfidenceInterval(0, 0, 3)), learner.testRule(parser.parseFormula("forall X: (isApple(X) => isRed(X))"), setOf(i5, i6)))
 	}
 }

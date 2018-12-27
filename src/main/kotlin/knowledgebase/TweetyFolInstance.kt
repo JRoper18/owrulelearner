@@ -246,13 +246,6 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 		}
 		return TruthValue.TRUE
 	}
-	fun query(queryStr : String) : TruthValue{
-		return query(parser.parseFormula(queryStr))
-	}
-
-	fun count(queryStr : String) : ConfidenceInterval {
-		return count(parser.parseFormula(queryStr))
-	}
 
 	override fun count(query : Formula) : ConfidenceInterval{
 		if(query is FolFormula){
@@ -289,6 +282,16 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 		throw IllegalArgumentException("Not a valid formula!")
 	}
 
+	fun query(queryStr : String) : TruthValue{
+		return query(parser.parseFormula(queryStr))
+	}
+
+	fun count(queryStr : String) : ConfidenceInterval {
+		return count(parser.parseFormula(queryStr))
+	}
+	fun infer(queryStr: String, rules : Set<InferenceRule>, inferenceDepth: Int) : Map<Set<InferenceRule>, ConfidenceInterval>{
+		return infer(parser.parseFormula(queryStr), rules, inferenceDepth)
+	}
 	override fun objects(): Set<String> {
 		return parser.signature.constants.map {
 			it.get()

@@ -1,6 +1,7 @@
 package test.kotlin.knowledgebase
 
 import main.kotlin.knowledgebase.ConfidenceInterval
+import main.kotlin.knowledgebase.InferenceRule
 import main.kotlin.knowledgebase.TruthValue
 import main.kotlin.knowledgebase.TweetyFolInstance
 import net.sf.tweety.logics.commons.syntax.Constant
@@ -63,6 +64,11 @@ internal class TweetyFolInstanceTest {
 	fun testCount(){
 		assertEquals(ConfidenceInterval(1, 0, 1), i1.count("forall X: (isApple(X) => isRed(X))"))
 		assertEquals(ConfidenceInterval(1, 0, 1), i2.count("forall X: (isApple(X) => isRed(X))"))
+	}
+
+	@Test
+	fun testInfer(){
+		assertEquals(mapOf(setOf<InferenceRule>() to ConfidenceInterval(1, 0, 1)), i1.infer("forall X: (isApple(X) => isRed(X))", setOf(), 1))
 	}
 
 	@Test
