@@ -15,4 +15,5 @@ interface Instance {
 	 * @return A mapping from which inference rules used to the resulting confidence interval.
 	 */
 	fun infer(query : Formula, rules : Set<InferenceRule>, inferenceDepth : Int) :  Map<Set<InferenceRule>, ConfidenceInterval>
+	fun count(query : Formula) : ConfidenceInterval
 }

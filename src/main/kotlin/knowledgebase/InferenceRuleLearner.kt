@@ -8,7 +8,7 @@ class InferenceRuleLearner(val config : InferenceRuleLearnerConfig, val rules : 
 		//First, we need to generate the rules we want to check.
 		val possibleRules = mutableSetOf<Formula>()
 		if(config.target == null){
-			//TODO: Generate ALL POSSIBLE RULES
+			//TODO: Generate ALL POSSIBLE RULES AND DESTROY MY COMPUTER
 		}
 		else {
 			//Only generate rules that are of the form:

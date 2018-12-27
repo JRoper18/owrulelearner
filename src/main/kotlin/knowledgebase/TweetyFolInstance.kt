@@ -8,18 +8,20 @@ import net.sf.tweety.logics.fol.parser.FolParser
 import net.sf.tweety.logics.fol.reasoner.FolReasoner
 import net.sf.tweety.logics.fol.reasoner.NaiveFolReasoner
 import net.sf.tweety.logics.fol.syntax.*
+import java.io.IOException
+import java.io.UncheckedIOException
 
 class TweetyFolInstance(val parser : FolParser) : Instance {
 	private val positives = mutableSetOf<FolFormula>()
 	private val negatives = mutableSetOf<FolFormula>()
 	private val beliefSet = FolBeliefSet()
 	override fun infer(query : Formula, rules : Set<InferenceRule>, inferenceDepth : Int): Map<Set<InferenceRule>, ConfidenceInterval> {
-		val rawTruth = this.query(query)
+		val count = this.count(query)
 		//If we aren't inferring or we know the answer, just return the raw truth value
-		if (inferenceDepth == 0 || rawTruth != TruthValue.UNKNOWN) {
-			return mapOf(Pair(setOf(), rawTruth.toConfidenceMeasure(1.0)))
+		if (inferenceDepth == 0 || count.correlation() == 1.0) {
+			return mapOf(Pair(setOf(), count))
 		}
-		var possibleIntervals = mutableMapOf<Set<InferenceRule>, ConfidenceInterval>(Pair(setOf(), ConfidenceInterval(0.0, 0.0, 1.0)))
+		var possibleIntervals = mutableMapOf<Set<InferenceRule>, ConfidenceInterval>(Pair(setOf(), count))
 		//It's unknown. Time for inference!
 		for (rule in rules) {
 			//Pretend the rule is true (if correlation > 0) or false (if correlation < 0)
@@ -244,10 +246,49 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 		}
 		return TruthValue.TRUE
 	}
-
 	fun query(queryStr : String) : TruthValue{
 		return query(parser.parseFormula(queryStr))
 	}
+
+	fun count(queryStr : String) : ConfidenceInterval {
+		return count(parser.parseFormula(queryStr))
+	}
+
+	override fun count(query : Formula) : ConfidenceInterval{
+		if(query is FolFormula){
+			if(query is ForallQuantifiedFormula){ //A forall formula indicates that we want to count how many times it's true.
+				if (query.quantifierVariables.isEmpty()) return this.count(query.formula as FolFormula)
+				val v = query.quantifierVariables.iterator().next()
+				val remainingVariables = query.quantifierVariables
+				remainingVariables.remove(v)
+				val constants = v.sort.getTerms(Constant::class.java)
+				var builtInterval = ConfidenceInterval(0, 0, 0)
+				for (c in constants) {
+					val sat = (this.count(ForallQuantifiedFormula(query.formula.substitute(v, c), remainingVariables)))
+					builtInterval = builtInterval.add(sat)
+				}
+				return builtInterval
+			}
+			else if(query is Implication){
+				val firstSat =(query(query.formulas.first))
+				val secondSat = query(query.formulas.second)
+				if(firstSat == TruthValue.FALSE){
+					return ConfidenceInterval(0, 0, 0)
+				}
+				else if(firstSat == TruthValue.UNKNOWN || secondSat == TruthValue.UNKNOWN){
+					return ConfidenceInterval(0, 0, 1) //TODO: How do I deal with an uncertain antecedent?
+				}
+				if(secondSat == TruthValue.FALSE){
+					return ConfidenceInterval(0, 1, 1)
+				}
+				return ConfidenceInterval(1, 0, 1)
+
+			}
+			return query(query).toConfidenceMeasure(1.0)
+		}
+		throw IllegalArgumentException("Not a valid formula!")
+	}
+
 	override fun objects(): Set<String> {
 		return parser.signature.constants.map {
 			it.get()

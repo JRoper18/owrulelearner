@@ -1,5 +1,6 @@
 package test.kotlin.knowledgebase
 
+import main.kotlin.knowledgebase.ConfidenceInterval
 import main.kotlin.knowledgebase.TruthValue
 import main.kotlin.knowledgebase.TweetyFolInstance
 import net.sf.tweety.logics.commons.syntax.Constant
@@ -11,28 +12,32 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 internal class TweetyFolInstanceTest {
-
-	@Test
-	fun testQuery() {
-		val sig = FolSignature(true)
+	val sig = FolSignature(true)
+	val parser = FolParser()
+	val i1 = TweetyFolInstance(parser)
+	val i2 = TweetyFolInstance(parser)
+	val i3 = TweetyFolInstance(parser)
+	val i4 = TweetyFolInstance(parser)
+	init {
 		sig.add(Constant("apple"))
 		sig.add(Constant("banana"))
 		sig.add(Predicate("isRed", 1))
 		sig.add(Predicate("isApple", 1))
-		val parser = FolParser()
 		parser.signature = sig
 		val f1 = parser.parseFormula("isRed(apple)") as FolFormula
 		val f2 = parser.parseFormula("!isRed(banana)") as FolFormula
 		val f3 = parser.parseFormula("isApple(apple)") as FolFormula
 		val f4 = parser.parseFormula("!isApple(banana)") as FolFormula
-		val i1 = TweetyFolInstance(parser)
 		i1.addFormulas(setOf(f1, f2, f3, f4))
-		val i2 = TweetyFolInstance(parser);
 		i2.addFormulas(setOf(f1, f3, f4))
-		val i3 = TweetyFolInstance(parser)
 		i3.addFormulas(setOf(f3, f4))
-		val i4 = TweetyFolInstance(parser)
 		i4.addFormulas(setOf(f2, f3, f4))
+
+	}
+
+	@Test
+	fun testQuery() {
+
 		assertEquals(TruthValue.TRUE, i1.query(parser.parseFormula("forall X: (isApple(X) => isRed(X))")))
 		assertEquals(TruthValue.TRUE, i2.query(parser.parseFormula("forall X: (isApple(X) => isRed(X))")))
 		assertEquals(TruthValue.UNKNOWN, i3.query(parser.parseFormula("forall X: (isApple(X) => isRed(X))")))
@@ -51,8 +56,13 @@ internal class TweetyFolInstanceTest {
 		assertEquals(TruthValue.UNKNOWN, i2.query("exists X: (!isRed(X))"))
 		assertEquals(TruthValue.UNKNOWN, i3.query("exists X: (!isRed(X))"))
 
-
 		assertEquals(TruthValue.TRUE, i3.query("isRed(banana) || !isRed(banana)")) //Should still detect logical "obviousness"
+	}
+
+	@Test
+	fun testCount(){
+		assertEquals(ConfidenceInterval(1, 0, 1), i1.count("forall X: (isApple(X) => isRed(X))"))
+		assertEquals(ConfidenceInterval(1, 0, 1), i2.count("forall X: (isApple(X) => isRed(X))"))
 	}
 
 	@Test
