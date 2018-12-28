@@ -33,7 +33,6 @@ internal class TweetyFolInstanceTest {
 		i2.addFormulas(setOf(f1, f3, f4))
 		i3.addFormulas(setOf(f3, f4))
 		i4.addFormulas(setOf(f2, f3, f4))
-
 	}
 
 	@Test

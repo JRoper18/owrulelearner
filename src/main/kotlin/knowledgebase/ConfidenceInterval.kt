@@ -20,6 +20,31 @@ data class ConfidenceInterval(val positive : Double, val negative : Double, val 
 	fun add(interval : ConfidenceInterval) : ConfidenceInterval{
 		return ConfidenceInterval(positive + interval.positive, negative + interval.negative, total + interval.total)
 	}
+	fun negation() : ConfidenceInterval {
+		return ConfidenceInterval(negative, positive, total)
+	}
+
+	fun intersection(other : ConfidenceInterval, intersectionSize : Double) : ConfidenceInterval{
+		//NOTE: These calculations are based off of intuitionistic fuzzy set theory, a good paper on which is here:
+		//https://www.irit.fr/~Didier.Dubois/Papers/cloudeus.pdf
+		//Scale down each interval to the unit interval by dividing by total, and then scale them back up again.
+		val numPositive = Math.min((positive / total), (other.positive / other.total)) * intersectionSize
+		val numNegative = Math.max(negative / total, other.negative / other.total) * intersectionSize
+		return ConfidenceInterval(numPositive, numNegative, intersectionSize)
+	}
+
+	/**
+	 * Takes the union of this interval and another interval, assuming maximum number of positives are joined.
+	 */
+	fun union(other : ConfidenceInterval, unionSize : Double) : ConfidenceInterval{
+		//TODO: Figure out a way to find the total number of occurances across instances instead of passing it in as param.
+		//NOTE: These calculations are based off of intuitionistic fuzzy set theory, a good paper on which is here:
+		//https://www.irit.fr/~Didier.Dubois/Papers/cloudeus.pdf
+		//Scale down each interval to the unit interval by dividing by total, and then scale them back up again.
+		val numPositive = Math.max((positive / total), (other.positive / other.total)) * unionSize
+		val numNegative = Math.min(negative / total, other.negative / other.total) * unionSize
+		return ConfidenceInterval(numPositive, numNegative, unionSize)
+	}
 	/**
 	 *	Returns a truth-value simplification of this confidence measure.
 	 *	Skepticism is the minimum amount of correlation needed

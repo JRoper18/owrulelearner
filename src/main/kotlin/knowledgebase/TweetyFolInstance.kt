@@ -289,7 +289,7 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 	fun count(queryStr : String) : ConfidenceInterval {
 		return count(parser.parseFormula(queryStr))
 	}
-	fun infer(queryStr: String, rules : Set<InferenceRule>, inferenceDepth: Int) : Map<Set<InferenceRule>, ConfidenceInterval>{
+	fun infer(queryStr: String, rules : Set<InferenceRule>, inferenceDepth: Int = 1) : Map<Set<InferenceRule>, ConfidenceInterval>{
 		return infer(parser.parseFormula(queryStr), rules, inferenceDepth)
 	}
 	override fun objects(): Set<String> {
