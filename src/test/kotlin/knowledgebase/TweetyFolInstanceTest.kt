@@ -71,6 +71,8 @@ internal class TweetyFolInstanceTest {
 	@Test
 	fun testInfer(){
 		assertEquals(mapOf(setOf<InferenceRule>() to ConfidenceInterval(1, 0, 1)), i1.infer("forall X: (isApple(X) => isRed(X))", setOf(), 1))
+		assertEquals(mapOf(setOf<InferenceRule>() to ConfidenceInterval(2, 0, 2)), i1.infer("(isApple(X) => isRed(X))", setOf(), 1))
+
 	}
 
 	@Test

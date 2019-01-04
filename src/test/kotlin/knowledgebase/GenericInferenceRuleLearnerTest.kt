@@ -10,7 +10,7 @@ import net.sf.tweety.logics.fol.syntax.FolSignature
 import org.junit.jupiter.api.Test;
 import kotlin.test.assertEquals
 
-internal class InferenceRuleLearnerTest {
+internal class GenericInferenceRuleLearnerTest {
 
 	@Test
 	fun testSingleRule(){
@@ -32,13 +32,13 @@ internal class InferenceRuleLearnerTest {
 		val i5 = TweetyFolInstance(parser, FolBeliefSet(setOf(f1, f2)))
 		val i6 = TweetyFolInstance(parser, FolBeliefSet(setOf(f1)))
 		val config = InferenceRuleLearnerConfig(sorting = Comparator { o1, o2 -> o1.evidence().compareTo(o2.evidence()) })
-		val learner = InferenceRuleLearner(config, setOf<InferenceRule>())
+		val learner = GenericInferenceRuleLearner(config, setOf<InferenceRule>())
 		assertEquals(setOf(ConfidenceInterval(6, 0, 8)), learner.testRule(parser.parseFormula("(isApple(X) => isRed(X))"), setOf(i1, i2, i3, i4)))
 		/*
 		assertEquals(setOf(ConfidenceInterval(1, 0, 3)), learner.testRule(parser.parseFormula("(isApple(X) => isRed(X))"), setOf(i2, i3, i4)))
 		assertEquals(setOf(ConfidenceInterval(2, 0, 2)), learner.testRule(parser.parseFormula("(isApple(X) => isRed(X))"), setOf(i1, i2)))
 		assertEquals(setOf(ConfidenceInterval(0, 0, 2)), learner.testRule(parser.parseFormula("(isApple(X) => isRed(X))"), setOf(i5)))
 		assertEquals(setOf(ConfidenceInterval(0, 0, 3)), learner.testRule(parser.parseFormula("(isApple(X) => isRed(X))"), setOf(i5, i6)))
-		*/g
+		*/
 	}
 }
