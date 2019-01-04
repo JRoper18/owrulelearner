@@ -7,6 +7,7 @@ import main.kotlin.knowledgebase.TweetyFolInstance
 import net.sf.tweety.logics.commons.syntax.Constant
 import net.sf.tweety.logics.commons.syntax.Predicate
 import net.sf.tweety.logics.fol.parser.FolParser
+import net.sf.tweety.logics.fol.syntax.FolBeliefSet
 import net.sf.tweety.logics.fol.syntax.FolFormula
 import net.sf.tweety.logics.fol.syntax.FolSignature
 import org.junit.jupiter.api.Assertions.*
@@ -15,10 +16,10 @@ import org.junit.jupiter.api.Test
 internal class TweetyFolInstanceTest {
 	val sig = FolSignature(true)
 	val parser = FolParser()
-	val i1 = TweetyFolInstance(parser)
-	val i2 = TweetyFolInstance(parser)
-	val i3 = TweetyFolInstance(parser)
-	val i4 = TweetyFolInstance(parser)
+	val i1 : TweetyFolInstance
+	val i2 : TweetyFolInstance
+	val i3 : TweetyFolInstance
+	val i4 : TweetyFolInstance
 	init {
 		sig.add(Constant("apple"))
 		sig.add(Constant("banana"))
@@ -29,10 +30,10 @@ internal class TweetyFolInstanceTest {
 		val f2 = parser.parseFormula("!isRed(banana)") as FolFormula
 		val f3 = parser.parseFormula("isApple(apple)") as FolFormula
 		val f4 = parser.parseFormula("!isApple(banana)") as FolFormula
-		i1.addFormulas(setOf(f1, f2, f3, f4))
-		i2.addFormulas(setOf(f1, f3, f4))
-		i3.addFormulas(setOf(f3, f4))
-		i4.addFormulas(setOf(f2, f3, f4))
+		i1 = TweetyFolInstance(parser, FolBeliefSet(setOf(f1, f2, f3, f4)))
+		i2 = TweetyFolInstance(parser, FolBeliefSet(setOf(f1, f3, f4)))
+		i3 = TweetyFolInstance(parser, FolBeliefSet(setOf(f3, f4)))
+		i4 = TweetyFolInstance(parser, FolBeliefSet(setOf(f2, f3, f4)))
 	}
 
 	@Test
@@ -61,8 +62,10 @@ internal class TweetyFolInstanceTest {
 
 	@Test
 	fun testCount(){
-		assertEquals(ConfidenceInterval(1, 0, 1), i1.count("forall X: (isApple(X) => isRed(X))"))
-		assertEquals(ConfidenceInterval(1, 0, 1), i2.count("forall X: (isApple(X) => isRed(X))"))
+		assertEquals(ConfidenceInterval(1, 1, 2), i1.count("(isApple(X) && isRed(X))"))
+		assertEquals(ConfidenceInterval(1, 1, 2), i2.count("(isApple(X) && isRed(X))"))
+		assertEquals(ConfidenceInterval(1, 0, 2), i2.count("(isApple(X) || isRed(X))"))
+
 	}
 
 	@Test

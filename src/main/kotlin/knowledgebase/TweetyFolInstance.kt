@@ -10,11 +10,14 @@ import net.sf.tweety.logics.fol.reasoner.NaiveFolReasoner
 import net.sf.tweety.logics.fol.syntax.*
 import java.io.IOException
 import java.io.UncheckedIOException
+import net.sf.tweety.logics.cl.semantics.RankingFunction.satisfies
+import net.sf.tweety.logics.fol.semantics.HerbrandInterpretation
+import net.sf.tweety.logics.fol.semantics.HerbrandBase
+import net.sf.tweety.logics.fol.syntax.FolSignature
 
-class TweetyFolInstance(val parser : FolParser) : Instance {
-	private val positives = mutableSetOf<FolFormula>()
-	private val negatives = mutableSetOf<FolFormula>()
-	private val beliefSet = FolBeliefSet()
+
+
+class TweetyFolInstance(val parser : FolParser, val beliefSet: FolBeliefSet) : Instance {
 	override fun infer(query : Formula, rules : Set<InferenceRule>, inferenceDepth : Int): Map<Set<InferenceRule>, ConfidenceInterval> {
 		val count = this.count(query)
 		//If we aren't inferring or we know the answer, just return the raw truth value
@@ -28,10 +31,10 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 			val folFormula = rule.formula as FolFormula
 			val correlation = rule.confidence.correlation()
 			if(correlation > 0){
-				positives.add(folFormula)
+				beliefSet.add(folFormula)
 			}
 			else if(correlation < 0){
-				negatives.add(folFormula)
+				beliefSet.add(Negation(folFormula))
 			}
 			else {
 				//Skip it.
@@ -47,239 +50,42 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 			}
 			//Remove it so that we don't use it in the next pass.
 			if(correlation > 0){
-				positives.remove(folFormula)
+				beliefSet.remove(folFormula)
 			}
 			else if(correlation < 0){
-				negatives.remove(folFormula)
+				beliefSet.remove(Negation(folFormula))
 			}
 		}
 		return possibleIntervals.toMap()
 	}
 	override fun query(query: Formula): TruthValue {
 		val f = query as FolFormula;
-		if (!f.isWellFormed)
-			throw IllegalArgumentException("The given formula $f is not well-formed.")
-		if (!f.isClosed)
-			throw IllegalArgumentException("The given formula $f is not closed.")
-		//First try to reason with the CWA
-		val cwaQuery = NaiveFolReasoner().query(beliefSet, f)
-		if(cwaQuery){
+		val reasoner = FolReasoner.getDefaultReasoner()
+		if(reasoner.query(beliefSet, f)){
 			return TruthValue.TRUE
 		}
-		//False under CWA, but could be unknown without it. Check:
-		return satisfies(query)
+		if(reasoner.query(beliefSet, Negation(f))){
+			return TruthValue.FALSE
+		}
+		return TruthValue.UNKNOWN
 	}
-	fun satisfies(formula: FolFormula?): TruthValue {
-		val f = formula as FolFormula
-		if(positives.contains(f)){
-			return TruthValue.TRUE
-		}
-		else if(negatives.contains(f)){
-			return TruthValue.FALSE
-		}
-		if (!f.isClosed) throw IllegalArgumentException("FolFormula $f is not closed.")
-
-		if (f is Tautology) {
-			return TruthValue.TRUE
-		}
-		if (f is Contradiction) {
-			return TruthValue.FALSE
-		}
-		if (f is FOLAtom) {
-			val p = f.predicate
-			if (p is EqualityPredicate) {
-				val terms = f.arguments
-				return if (terms[0].equals(terms[1]))
-					TruthValue.TRUE
-				else
-					TruthValue.FALSE
-			} else if (p is InequalityPredicate) {
-				val terms = f.arguments
-				return if (terms[0].equals(terms[1]))
-					TruthValue.FALSE
-				else
-					TruthValue.TRUE
-			}
-			//HERE'S THE IMPORTANT PART THAT MAKES IT THE OWA:
-			//Previously: return this.contains(f)
-			if(positives.contains(f)){
-				return TruthValue.TRUE
-			}
-			else if(negatives.contains(f)){
-				return TruthValue.FALSE
-			}
-			return TruthValue.UNKNOWN
-		}
-		//Disjunction and Conjunction follow Kleene/Priest trinary logic.
-		if (f is Disjunction) {
-			val d = f
-			var foundUnknown = false
-			for (rf in d){
-				val satisfies = (satisfies(rf as FolFormula))
-				if(satisfies == TruthValue.TRUE){
-					return TruthValue.TRUE
-				}
-				else if(satisfies == TruthValue.UNKNOWN){
-					foundUnknown = true
-				}
-			}
-			if(foundUnknown){
-				return TruthValue.UNKNOWN
-			}
-			return TruthValue.FALSE
-		}
-		if (f is Conjunction) {
-			val c = f
-			var foundUnknown = false
-
-			for (rf in c){
-				val satisfies = (satisfies(rf as FolFormula))
-				if(satisfies == TruthValue.FALSE){
-					return TruthValue.FALSE;
-				}
-				else if(satisfies == TruthValue.UNKNOWN){
-					foundUnknown = true
-				}
-			}
-			if(foundUnknown){
-				return TruthValue.UNKNOWN;
-			}
-			return TruthValue.TRUE
-		}
-		//Implication also Kleene/Priest rather than Lukaseiwicz, because OWA: We don't assume what we have no data for.
-		if (f is Implication) {
-			val firstSat = this.satisfies(f.formulas.first as FolFormula)
-			val secondSat = this.satisfies(f.formulas.second as FolFormula)
-			if(firstSat == TruthValue.FALSE || secondSat == TruthValue.TRUE){
-				return TruthValue.TRUE; //False implies true.
-			}
-			if (firstSat == TruthValue.TRUE && secondSat == TruthValue.FALSE){
-				return TruthValue.FALSE;
-			}
-			return TruthValue.UNKNOWN
-		}
-		if (f is Equivalence) {
-			val e = f
-			val a = e.getFormulas().getFirst()
-			val b = e.getFormulas().getSecond()
-			val firstSat = this.satisfies(a as FolFormula)
-			val secondSat = this.satisfies(b as FolFormula)
-			if (firstSat == TruthValue.UNKNOWN || secondSat == TruthValue.UNKNOWN) {
-				return TruthValue.UNKNOWN
-			}
-			return TruthValue.fromBool(firstSat == secondSat)
-		}
-		if (f is Negation) {
-			val n = f
-			return this.satisfies(n.getFormula()).not()
-		}
-		if (f is ExistsQuantifiedFormula) {
-			if (f.quantifierVariables.isEmpty()) return this.satisfies(f.formula)
-			val v = f.quantifierVariables.iterator().next()
-			val remainingVariables = f.quantifierVariables
-			remainingVariables.remove(v)
-
-			val constants = v.sort.getTerms(Constant::class.java)
-			var foundUnknown = false;
-			if (remainingVariables.isEmpty()) {
-				for (c in constants) {
-					val satisfies = satisfies(f.formula.substitute(v, c))
-					if (satisfies == TruthValue.TRUE)
-						return TruthValue.TRUE
-					else if(satisfies == TruthValue.UNKNOWN){
-						foundUnknown = true;
-					}
-				}
-
-			} else {
-				for (c in constants) {
-					val satisfies = satisfies(ExistsQuantifiedFormula(f.formula.substitute(v, c), remainingVariables))
-					if(satisfies == TruthValue.TRUE)
-						return TruthValue.TRUE
-					else if(satisfies == TruthValue.UNKNOWN){
-						foundUnknown = true
-					}
-				}
-			}
-			if(foundUnknown){ //If there's a chance one of the existing things fill this property but we don't know, we don't know.
-				return TruthValue.UNKNOWN
-			}
-			return TruthValue.FALSE
-		}
-		if (f is ForallQuantifiedFormula) {
-			if (f.quantifierVariables.isEmpty()) return this.satisfies(f.formula)
-			val v = f.quantifierVariables.iterator().next()
-			val remainingVariables = f.quantifierVariables
-			remainingVariables.remove(v)
-
-			val constants = v.sort.getTerms(Constant::class.java)
-			var foundUnknown = false;
-			for (c in constants) {
-				val sat = (this.satisfies(ForallQuantifiedFormula(f.formula.substitute(v, c), remainingVariables)))
-				if(sat == TruthValue.FALSE){
-					return TruthValue.FALSE
-				}
-				else if(sat == TruthValue.UNKNOWN){
-					foundUnknown = true
-				}
-			}
-			if(foundUnknown){ //If we aren't sure it holds for EVERY one, we aren't sure.
-				return TruthValue.UNKNOWN
-			}
-			return TruthValue.TRUE
-		}
-		throw IllegalArgumentException("FolFormula $f is of unknown type.")
-	}
-	fun satisfies(beliefSet: FolBeliefSet) : TruthValue {
-		var foundUnknown = false
-		beliefSet.forEach {
-			val sat = this.satisfies(it)
-			if(sat == TruthValue.FALSE){
-				return TruthValue.FALSE
-			}
-			else if(sat == TruthValue.UNKNOWN){
-				foundUnknown = true
-			}
-		}
-		if(foundUnknown){
-			return TruthValue.UNKNOWN
-		}
-		return TruthValue.TRUE
-	}
-
 	override fun count(query : Formula) : ConfidenceInterval{
 		if(query is FolFormula){
-			if(query is ForallQuantifiedFormula){ //A forall formula indicates that we want to count how many times it's true.
-				if (query.quantifierVariables.isEmpty()) return this.count(query.formula as FolFormula)
-				val v = query.quantifierVariables.iterator().next()
-				val remainingVariables = query.quantifierVariables
-				remainingVariables.remove(v)
-				val constants = v.sort.getTerms(Constant::class.java)
-				var builtInterval = ConfidenceInterval(0, 0, 0)
-				for (c in constants) {
-					val sat = (this.count(ForallQuantifiedFormula(query.formula.substitute(v, c), remainingVariables)))
-					builtInterval = builtInterval.add(sat)
-				}
-				return builtInterval
+			if(query.unboundVariables.isEmpty()){
+				return this.query(query).toConfidenceMeasure(1.0)
 			}
-			else if(query is Implication){
-				val firstSat =(query(query.formulas.first))
-				val secondSat = query(query.formulas.second)
-				if(firstSat == TruthValue.FALSE){
-					return ConfidenceInterval(0, 0, 0)
-				}
-				else if(firstSat == TruthValue.UNKNOWN || secondSat == TruthValue.UNKNOWN){
-					return ConfidenceInterval(0, 0, 1) //TODO: How do I deal with an uncertain antecedent?
-				}
-				if(secondSat == TruthValue.FALSE){
-					return ConfidenceInterval(0, 1, 1)
-				}
-				return ConfidenceInterval(1, 0, 1)
-
+			val v = query.unboundVariables.iterator().next()
+			val remainingVariables = query.unboundVariables
+			remainingVariables.remove(v)
+			val constants = v.sort.getTerms(Constant::class.java)
+			var builtInterval = ConfidenceInterval(0, 0, 0)
+			for (c in constants) {
+				val sat = (this.count(query.formula.substitute(v, c)))
+				builtInterval = builtInterval.add(sat)
 			}
-			return query(query).toConfidenceMeasure(1.0)
+			return builtInterval
 		}
-		throw IllegalArgumentException("Not a valid formula!")
+		throw IllegalArgumentException("Not a valid FOL formula!")
 	}
 
 	fun query(queryStr : String) : TruthValue{
@@ -297,31 +103,4 @@ class TweetyFolInstance(val parser : FolParser) : Instance {
 			it.get()
 		}.toSet()
 	}
-	fun addFormula(formula : FolFormula, positive : Boolean = true){
-		if(formula is Negation){
-			addFormula(formula.formula, !positive)
-		}
-		else if(formula is Conjunction){
-			formula.forEach {
-				addFormula(it as FolFormula, positive)
-			}
-			addFormula(formula, positive)
-		}
-		else{
-			if(positive){
-				beliefSet.add(formula)
-				positives.add(formula)
-			}
-			else {
-				beliefSet.add(Negation(formula))
-				negatives.add(formula)
-			}
-		}
-	}
-	fun addFormulas(formulas : Set<FolFormula>){
-		formulas.forEach{
-			addFormula(it)
-		}
-	}
-
 }

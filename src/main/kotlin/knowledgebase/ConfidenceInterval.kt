@@ -55,7 +55,7 @@ data class ConfidenceInterval(val positive : Double, val negative : Double, val 
 			return TruthValue.UNKNOWN
 		}
 		else {
-			return if(correlation() > 0) TruthValue.TRUE else TruthValue.FALSE
+			return if(correlation() > 0) TruthValue.TRUE else if(correlation() < 0) TruthValue.FALSE else TruthValue.UNKNOWN
 		}
 	}
 }

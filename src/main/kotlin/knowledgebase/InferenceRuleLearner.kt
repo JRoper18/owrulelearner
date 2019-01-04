@@ -11,8 +11,10 @@ class InferenceRuleLearner(val config : InferenceRuleLearnerConfig, val rules : 
 			//TODO: Generate ALL POSSIBLE RULES AND DESTROY MY COMPUTER
 		}
 		else {
-			//Only generate rules that are of the form:
+			//Only generate horn clauses /rules that are of the form:
 			//Formula -> target
+
+
 		}
 		val generatedRules = mutableSetOf<InferenceRule>()
 		for(rule in possibleRules){
@@ -41,10 +43,10 @@ class InferenceRuleLearner(val config : InferenceRuleLearnerConfig, val rules : 
 			return toReturn.toSet()
 		}
 		val sorted = TreeSet<ConfidenceInterval>(config.sorting)
-		if(config.maxItems > 0){
+		if(config.maxIntervals > 0){ //Less than or equal to 0 means "just save them all"
 			toReturn.forEach {
 				sorted.add(it)
-				if(sorted.size > config.maxItems){
+				if(sorted.size > config.maxIntervals){
 					sorted.remove(sorted.first())
 				}
 			}

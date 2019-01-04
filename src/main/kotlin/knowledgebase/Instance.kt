@@ -18,6 +18,7 @@ interface Instance {
 
 	/**
 	 * Returns the number of times a query is satisfied, dissatisfied, and left unknown in an instance.
+	 * The formula checks all unbound variables against all possible combinations on constants.
 	 */
 	fun count(query : Formula) : ConfidenceInterval
 }
