@@ -12,11 +12,11 @@ enum class TruthValue {
 			UNKNOWN -> return UNKNOWN
 		}
 	}
-	fun toConfidenceMeasure(evidenceSize : Double) : ConfidenceInterval{
+	fun toConfidenceMeasure(evidenceSize : Double) : EvidenceInterval{
 		when(this){
-			TRUE -> return ConfidenceInterval(evidenceSize, 0.0, evidenceSize)
-			FALSE -> return ConfidenceInterval(0.0, evidenceSize, evidenceSize)
-			UNKNOWN -> return ConfidenceInterval(0.0, 0.0, evidenceSize)
+			TRUE -> return EvidenceInterval(evidenceSize, 0.0, evidenceSize)
+			FALSE -> return EvidenceInterval(0.0, evidenceSize, evidenceSize)
+			UNKNOWN -> return EvidenceInterval(0.0, 0.0, evidenceSize)
 		}
 	}
 

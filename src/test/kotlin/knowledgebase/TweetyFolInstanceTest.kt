@@ -1,6 +1,6 @@
 package test.kotlin.knowledgebase
 
-import main.kotlin.knowledgebase.ConfidenceInterval
+import main.kotlin.knowledgebase.EvidenceInterval
 import main.kotlin.knowledgebase.InferenceRule
 import main.kotlin.knowledgebase.TruthValue
 import main.kotlin.knowledgebase.TweetyFolInstance
@@ -62,16 +62,16 @@ internal class TweetyFolInstanceTest {
 
 	@Test
 	fun testCount(){
-		assertEquals(ConfidenceInterval(1, 1, 2), i1.count("(isApple(X) && isRed(X))"))
-		assertEquals(ConfidenceInterval(1, 1, 2), i2.count("(isApple(X) && isRed(X))"))
-		assertEquals(ConfidenceInterval(1, 0, 2), i2.count("(isApple(X) || isRed(X))"))
+		assertEquals(EvidenceInterval(1, 1, 2), i1.count("(isApple(X) && isRed(X))"))
+		assertEquals(EvidenceInterval(1, 1, 2), i2.count("(isApple(X) && isRed(X))"))
+		assertEquals(EvidenceInterval(1, 0, 2), i2.count("(isApple(X) || isRed(X))"))
 
 	}
 
 	@Test
 	fun testInfer(){
-		assertEquals(mapOf(setOf<InferenceRule>() to ConfidenceInterval(1, 0, 1)), i1.infer("forall X: (isApple(X) => isRed(X))", setOf(), 1))
-		assertEquals(mapOf(setOf<InferenceRule>() to ConfidenceInterval(2, 0, 2)), i1.infer("(isApple(X) => isRed(X))", setOf(), 1))
+		assertEquals(mapOf(setOf<InferenceRule>() to EvidenceInterval(1, 0, 1)), i1.infer("forall X: (isApple(X) => isRed(X))", setOf(), 1))
+		assertEquals(mapOf(setOf<InferenceRule>() to EvidenceInterval(2, 0, 2)), i1.infer("(isApple(X) => isRed(X))", setOf(), 1))
 
 	}
 

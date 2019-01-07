@@ -5,7 +5,7 @@ import java.util.*
 
 class GenericInferenceRuleLearner(config : InferenceRuleLearnerConfig, rules : Set<InferenceRule> = setOf()) : InferenceRuleLearner(config, rules) {
 
-	override fun findRules(instances : Set<Instance>) : Set<InferenceRule>{
+	override fun findRules(instances : Set<Instance>) : Map<Set<InferenceRule>, Set<InferenceRule>> {
 		//Assume all instances have the same signature.
 		//First, we need to generate the rules we want to check.
 		val possibleRules = mutableSetOf<InferenceRule>()
@@ -16,43 +16,22 @@ class GenericInferenceRuleLearner(config : InferenceRuleLearnerConfig, rules : S
 			//Only generate horn clauses/rules that are of the form:
 			//Formula -> target
 		}
-		val generatedRules = mutableSetOf<InferenceRule>()
+		val generatedRules = mutableMapOf<Set<InferenceRule>, Set<InferenceRule>>()
 		for(rule in possibleRules){
-			val ruleIntervals = testRule(rule, instances) //Already filtered.
-			for(interval in ruleIntervals){
-				generatedRules.add(InferenceRule(rule.formula, interval))
-			}
-		}
-		return generatedRules.toSet()
-	}
-	override fun testRule(rule : InferenceRule, instances : Set<Instance>) : Set<ConfidenceInterval> {
-		var toReturn = mutableSetOf<ConfidenceInterval>(ConfidenceInterval(0.0, 0.0, 0.0))
-		for (instance in instances) {
-			val newIntervals = mutableSetOf<ConfidenceInterval>()
-			val intervals = instance.infer(rule.formula, rules, config.inferenceDepth)
-			intervals.forEach { rulesUsed, interval ->
-				if (config.filter(InferenceRule(rule.formula, interval))) {
-					for (previousInter in toReturn) {
-						newIntervals.add(interval.add(previousInter))
-					}
+			val resultingRules = testRule(rule, instances) //Already filtered.
+			for(testedRules in resultingRules){
+				val assumptions = testedRules.key
+				val resultingRule = testedRules.value
+				if(generatedRules.containsKey(assumptions)){
+					val prev = generatedRules.get(assumptions)!!
+					prev.toMutableSet().add(resultingRule)
+					generatedRules.put(assumptions, prev.toSet())
+				}
+				else{
+					generatedRules.put(assumptions, setOf(resultingRule))
 				}
 			}
-			toReturn = newIntervals
 		}
-		if (config.sorting == null) {
-			return toReturn.toSet()
-		}
-		val sorted = TreeSet<ConfidenceInterval>(config.sorting)
-		if (config.maxIntervals > 0) { //Less than or equal to 0 means "just save them all"
-			toReturn.forEach {
-				sorted.add(it)
-				if (sorted.size > config.maxIntervals) {
-					sorted.remove(sorted.first())
-				}
-			}
-		} else {
-			sorted.addAll(toReturn)
-		}
-		return sorted
+		return generatedRules.toMap()
 	}
 }
