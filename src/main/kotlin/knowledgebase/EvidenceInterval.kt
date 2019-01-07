@@ -58,4 +58,11 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 			return if(correlation() > 0) TruthValue.TRUE else if(correlation() < 0) TruthValue.FALSE else TruthValue.UNKNOWN
 		}
 	}
+
+	companion object {
+		val EMPTY = EvidenceInterval(0, 0, 0)
+		val POSITIVE = EvidenceInterval(1, 0, 1)
+		val NEGATIVE = EvidenceInterval(0, 1, 1)
+		val UNKNOWN = EvidenceInterval(0, 0, 1)
+	}
 }
