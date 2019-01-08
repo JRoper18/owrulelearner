@@ -32,16 +32,16 @@ internal class GenericInferenceRuleLearnerTest {
 		val i5 = TweetyFolInstance(parser, FolBeliefSet(setOf(f1, f2)))
 		val i6 = TweetyFolInstance(parser, FolBeliefSet(setOf(f1)))
 		val config = InferenceRuleLearnerConfig(sorting = Comparator { o1, o2 -> o1.evidence().compareTo(o2.evidence()) })
-		val learner = GenericInferenceRuleLearner(config, setOf<InferenceRule>())
+		val learner = GenericInferenceRuleLearner(config, setOf())
 		val ruleFormula = parser.parseFormula("(isApple(X) => isRed(X))")
 		val rule = InferenceRule(ruleFormula, EvidenceInterval.EMPTY)
-		assertEquals(mapOf(Pair(setOf<InferenceRule>(), InferenceRule(ruleFormula, EvidenceInterval(6, 0, 8)))), learner.testRule(rule, setOf(i1, i2, i3, i4)))
+		assertEquals(mapOf(Pair(setOf(), InferenceRule(ruleFormula, EvidenceInterval(6, 0, 8)))), learner.testRule(rule, setOf(i1, i2, i3, i4)))
 
-		assertEquals(mapOf(Pair(setOf<InferenceRule>(), InferenceRule(ruleFormula, EvidenceInterval(4, 0, 6)))), learner.testRule(rule, setOf(i2, i3, i4)))
+		assertEquals(mapOf(Pair(setOf(), InferenceRule(ruleFormula, EvidenceInterval(4, 0, 6)))), learner.testRule(rule, setOf(i2, i3, i4)))
 
-		assertEquals(mapOf(Pair(setOf<InferenceRule>(), InferenceRule(ruleFormula, EvidenceInterval(4, 0, 4)))), learner.testRule(rule, setOf(i1, i2)))
-		assertEquals(mapOf(Pair(setOf<InferenceRule>(), InferenceRule(ruleFormula, EvidenceInterval(1, 0, 2)))), learner.testRule(rule, setOf(i5)))
-		assertEquals(mapOf(Pair(setOf<InferenceRule>(), InferenceRule(ruleFormula, EvidenceInterval(2, 0, 4)))), learner.testRule(rule, setOf(i5, i6)))
+		assertEquals(mapOf(Pair(setOf(), InferenceRule(ruleFormula, EvidenceInterval(4, 0, 4)))), learner.testRule(rule, setOf(i1, i2)))
+		assertEquals(mapOf(Pair(setOf(), InferenceRule(ruleFormula, EvidenceInterval(1, 0, 2)))), learner.testRule(rule, setOf(i5)))
+		assertEquals(mapOf(Pair(setOf(), InferenceRule(ruleFormula, EvidenceInterval(2, 0, 4)))), learner.testRule(rule, setOf(i5, i6)))
 
 	}
 }

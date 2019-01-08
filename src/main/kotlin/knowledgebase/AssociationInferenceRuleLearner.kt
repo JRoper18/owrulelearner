@@ -8,9 +8,8 @@ class AssociationInferenceRuleLearner(config : InferenceRuleLearnerConfig, rules
 	override fun testRule(rule: InferenceRule, instances: Set<Instance>) : Map<Set<InferenceRule>, InferenceRule>{
 		if(rule is AssociationInferenceRule){
 			 //Support = count(antecedent ^ consequent)
-			val supports = countTotal(Conjunction(setOf(rule.antecedent, rule.consequent)), instances)
+			val supports = countTotal(Conjunction(rule.antecedent, rule.consequent), instances)
 			val antecedentCounts = countTotal(rule.antecedent, instances)
-			val confidences = mutableMapOf<Set<InferenceRule>, EvidenceInterval>()
 			val results = mutableMapOf<Set<InferenceRule>, InferenceRule>()
 			supports.forEach { rulesUsed, supportRule ->
 				val anteCount = antecedentCounts.get(rulesUsed)!!.evidence.positive

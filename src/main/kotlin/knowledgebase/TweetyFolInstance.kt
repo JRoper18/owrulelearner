@@ -12,7 +12,7 @@ class TweetyFolInstance(val parser : FolParser, val beliefSet: FolBeliefSet) : I
 		val count = this.count(query)
 		val depth = if(inferenceDepth > rules.size) rules.size else inferenceDepth
 		//If we aren't inferring or we know the answer, just return the raw truth value
-		if (depth == 0 || count.correlation() == 1.0) {
+		if (depth == 0 || Math.abs(count.correlation()) == 1.0) {
 			return mapOf(Pair(setOf(), count))
 		}
 		var possibleIntervals = mutableMapOf<Set<InferenceRule>, EvidenceInterval>(Pair(setOf(), count))
@@ -20,12 +20,13 @@ class TweetyFolInstance(val parser : FolParser, val beliefSet: FolBeliefSet) : I
 		for (rule in rules) {
 			//Pretend the rule is true (if correlation > 0) or false (if correlation < 0)
 			val folFormula = rule.formula as FolFormula
-			val correlation = rule.evidence!!.correlation()
+			var quantified = ForallQuantifiedFormula(folFormula, folFormula.unboundVariables)
+			val correlation = rule.evidence.correlation()
 			if(correlation > 0){
-				beliefSet.add(folFormula)
+				beliefSet.add(quantified)
 			}
 			else if(correlation < 0){
-				beliefSet.add(Negation(folFormula))
+				beliefSet.add(Negation(quantified))
 			}
 			else {
 				//Skip it.
@@ -37,14 +38,14 @@ class TweetyFolInstance(val parser : FolParser, val beliefSet: FolBeliefSet) : I
 			conf.forEach {
 				val rulesUsed = mutableSetOf(rule)
 				rulesUsed.addAll(it.key)
-				possibleIntervals.put(rulesUsed, it.value)
+				possibleIntervals.put(rulesUsed, it.value.intersection(rule.evidence))
 			}
 			//Remove it so that we don't use it in the next pass.
 			if(correlation > 0){
-				beliefSet.remove(folFormula)
+				beliefSet.remove(quantified)
 			}
 			else if(correlation < 0){
-				beliefSet.remove(Negation(folFormula))
+				beliefSet.remove(Negation(quantified))
 			}
 		}
 		return possibleIntervals.toMap()
@@ -61,6 +62,7 @@ class TweetyFolInstance(val parser : FolParser, val beliefSet: FolBeliefSet) : I
 		return TruthValue.UNKNOWN
 	}
 	override fun count(query : Formula) : EvidenceInterval{
+
 		if(query is FolFormula){
 			if(query.unboundVariables.isEmpty()){
 				return this.query(query).toConfidenceMeasure(1.0)

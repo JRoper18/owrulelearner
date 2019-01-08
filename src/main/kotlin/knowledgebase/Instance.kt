@@ -19,4 +19,6 @@ interface Instance {
 	 * The formula checks all unbound variables against all possible combinations on constants.
 	 */
 	fun count(query : Formula) : EvidenceInterval
+
+
 }

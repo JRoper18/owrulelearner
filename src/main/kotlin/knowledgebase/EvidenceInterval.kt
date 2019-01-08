@@ -1,9 +1,40 @@
 package main.kotlin.knowledgebase
 
+import com.sun.org.apache.bcel.internal.generic.FALOAD
+import java.lang.IllegalArgumentException
+
 data class EvidenceInterval(val positive : Double, val negative : Double, val total : Double) {
 	constructor(positive : Int, negative : Int, total : Int) : this(positive + 0.0, negative + 0.0, total + 0.0)
+	init {
+		if(positive < 0 || negative < 0 || total < 0){
+			//Not valid, positive reals ONLY.
+			throw IllegalArgumentException("EvidenceIntervals can only have positive (>=0) values.")
+		}
+		else if(positive + negative > total){
+			//Also not valid.
+			throw IllegalArgumentException("The number of positive and negative proof must total less than or equal to the total. ")
+		}
+	}
 	fun correlation() : Double {
-		return (positive - negative) / total
+		if(total == 0.0){
+			return 0.0
+		}
+		val res = (positive - negative) / total
+		if(res != Double.NaN){
+			return res
+		}
+		if(positive == Double.POSITIVE_INFINITY && negative == Double.POSITIVE_INFINITY){
+			return 0.0
+		}
+		else if(positive == Double.POSITIVE_INFINITY){
+			return 1.0
+		}
+		else if(negative == Double.POSITIVE_INFINITY){
+			return -1.0
+		}
+		else{
+			return res //Idk how we got here.
+		}
 	}
 	fun evidence() : Double {
 		return positive + negative
@@ -11,11 +42,20 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 	fun scale(scalar : Double) : EvidenceInterval{
 		return EvidenceInterval(positive * scalar, negative * scalar, total * scalar)
 	}
-	fun normalize(toVal : Double) : EvidenceInterval {
+	fun normalize(toVal : Double = 1.0) : EvidenceInterval {
+		if(total == Double.POSITIVE_INFINITY){
+			if(positive == Double.POSITIVE_INFINITY && negative == Double.POSITIVE_INFINITY){
+				return UNKNOWN
+			}
+			else if(positive == Double.POSITIVE_INFINITY){
+				return POSITIVE
+			}
+			else if(negative == Double.POSITIVE_INFINITY){
+				return NEGATIVE
+			}
+			return UNKNOWN
+		}
 		return scale(toVal / total)
-	}
-	fun normalize() : EvidenceInterval {
-		return normalize(1.0)
 	}
 	fun add(interval : EvidenceInterval) : EvidenceInterval{
 		return EvidenceInterval(positive + interval.positive, negative + interval.negative, total + interval.total)
@@ -24,7 +64,7 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 		return EvidenceInterval(negative, positive, total)
 	}
 
-	fun intersection(other : EvidenceInterval, intersectionSize : Double) : EvidenceInterval{
+	fun intersection(other : EvidenceInterval, intersectionSize : Double = 1.0) : EvidenceInterval{
 		//NOTE: These calculations are based off of intuitionistic fuzzy set theory, a good paper on which is here:
 		//https://www.irit.fr/~Didier.Dubois/Papers/cloudeus.pdf
 		//Scale down each interval to the unit interval by dividing by total, and then scale them back up again.
@@ -36,7 +76,7 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 	/**
 	 * Takes the union of this interval and another interval, assuming maximum number of positives are joined.
 	 */
-	fun union(other : EvidenceInterval, unionSize : Double) : EvidenceInterval{
+	fun union(other : EvidenceInterval, unionSize : Double = 1.0) : EvidenceInterval{
 		//TODO: Figure out a way to find the total number of occurances across instances instead of passing it in as param.
 		//NOTE: These calculations are based off of intuitionistic fuzzy set theory, a good paper on which is here:
 		//https://www.irit.fr/~Didier.Dubois/Papers/cloudeus.pdf
