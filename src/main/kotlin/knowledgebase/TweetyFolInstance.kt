@@ -3,11 +3,18 @@ package main.kotlin.knowledgebase
 import net.sf.tweety.commons.Formula
 import net.sf.tweety.logics.commons.syntax.Constant
 import net.sf.tweety.logics.fol.parser.FolParser
+import net.sf.tweety.logics.fol.reasoner.EFOLReasoner
 import net.sf.tweety.logics.fol.reasoner.FolReasoner
+import net.sf.tweety.logics.fol.reasoner.NaiveFolReasoner
 import net.sf.tweety.logics.fol.syntax.*
 
 
 class TweetyFolInstance(val parser : FolParser, val beliefSet: FolBeliefSet) : Instance {
+	companion object {
+		init {
+			FolReasoner.setDefaultReasoner(NaiveFolReasoner());
+		}
+	}
 	override fun infer(query : Formula, rules : Set<InferenceRule>, inferenceDepth : Int): Map<Set<InferenceRule>, EvidenceInterval> {
 		val count = this.count(query)
 		val depth = if(inferenceDepth > rules.size) rules.size else inferenceDepth
@@ -96,4 +103,6 @@ class TweetyFolInstance(val parser : FolParser, val beliefSet: FolBeliefSet) : I
 			it.get()
 		}.toSet()
 	}
+
+
 }

@@ -1,6 +1,7 @@
 package main.kotlin.knowledgebase
 
 import com.sun.org.apache.bcel.internal.generic.FALOAD
+import net.sf.tweety.math.Interval
 import java.lang.IllegalArgumentException
 
 data class EvidenceInterval(val positive : Double, val negative : Double, val total : Double) {
@@ -12,7 +13,7 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 		}
 		else if(positive + negative > total){
 			//Also not valid.
-			throw IllegalArgumentException("The number of positive and negative proof must total less than or equal to the total. ")
+			throw IllegalArgumentException("The number of positive and negative proof must total less than or equal to the total. ($positive+$negative<=$total")
 		}
 	}
 	fun correlation() : Double {
@@ -84,6 +85,16 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 		val numPositive = Math.max((positive / total), (other.positive / other.total)) * unionSize
 		val numNegative = Math.min(negative / total, other.negative / other.total) * unionSize
 		return EvidenceInterval(numPositive, numNegative, unionSize)
+	}
+
+	fun unknown() : Double{
+		return total - positive - negative
+	}
+	fun positiveInterval() : Interval<Double>{
+		return Interval(positive, positive + unknown())
+	}
+	fun negativeInterval() : Interval<Double> {
+		return Interval(negative, negative + unknown())
 	}
 	/**
 	 *	Returns a truth-value simplification of this evidence measure.

@@ -39,7 +39,7 @@ internal class TweetyFolInstanceTest {
 
 	@Test
 	fun testQuery() {
-
+		println(i1.query(parser.parseFormula("isApple(apple)")))
 		assertEquals(TruthValue.TRUE, i1.query(parser.parseFormula("forall X: (isApple(X) => isRed(X))")))
 		assertEquals(TruthValue.TRUE, i2.query(parser.parseFormula("forall X: (isApple(X) => isRed(X))")))
 		assertEquals(TruthValue.UNKNOWN, i3.query(parser.parseFormula("forall X: (isApple(X) => isRed(X))")))

@@ -10,5 +10,4 @@ import net.sf.tweety.logics.fol.syntax.FolFormula
 
 
 fun main(args: Array<String>){
-
 }

@@ -1,1 +1,8 @@
-{}
+Thing = {apple1, apple2, apple3, greenApple1, banana1, banana2, pear1, pear2, orange1}
+
+type(isApple(Thing))
+type(isRed(Thing))
+type(isFruit(Thing))
+
+
+
