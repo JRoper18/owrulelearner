@@ -1,6 +1,5 @@
-package main.kotlin.knowledgebase
+package main.kotlin.commons
 
-import com.sun.org.apache.bcel.internal.generic.FALOAD
 import net.sf.tweety.math.Interval
 import java.lang.IllegalArgumentException
 
@@ -21,51 +20,25 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 			return 0.0
 		}
 		val res = (positive - negative) / total
-		if(res != Double.NaN){
-			return res
-		}
-		if(positive == Double.POSITIVE_INFINITY && negative == Double.POSITIVE_INFINITY){
-			return 0.0
-		}
-		else if(positive == Double.POSITIVE_INFINITY){
-			return 1.0
-		}
-		else if(negative == Double.POSITIVE_INFINITY){
-			return -1.0
-		}
-		else{
-			return res //Idk how we got here.
-		}
+		return res
 	}
 	fun evidence() : Double {
 		return positive + negative
 	}
-	fun scale(scalar : Double) : EvidenceInterval{
+	fun scale(scalar : Double) : EvidenceInterval {
 		return EvidenceInterval(positive * scalar, negative * scalar, total * scalar)
 	}
 	fun normalize(toVal : Double = 1.0) : EvidenceInterval {
-		if(total == Double.POSITIVE_INFINITY){
-			if(positive == Double.POSITIVE_INFINITY && negative == Double.POSITIVE_INFINITY){
-				return UNKNOWN
-			}
-			else if(positive == Double.POSITIVE_INFINITY){
-				return POSITIVE
-			}
-			else if(negative == Double.POSITIVE_INFINITY){
-				return NEGATIVE
-			}
-			return UNKNOWN
-		}
 		return scale(toVal / total)
 	}
-	fun add(interval : EvidenceInterval) : EvidenceInterval{
+	fun add(interval : EvidenceInterval) : EvidenceInterval {
 		return EvidenceInterval(positive + interval.positive, negative + interval.negative, total + interval.total)
 	}
 	fun negation() : EvidenceInterval {
 		return EvidenceInterval(negative, positive, total)
 	}
 
-	fun intersection(other : EvidenceInterval, intersectionSize : Double = 1.0) : EvidenceInterval{
+	fun intersection(other : EvidenceInterval, intersectionSize : Double = 1.0) : EvidenceInterval {
 		//NOTE: These calculations are based off of intuitionistic fuzzy set theory, a good paper on which is here:
 		//https://www.irit.fr/~Didier.Dubois/Papers/cloudeus.pdf
 		//Scale down each interval to the unit interval by dividing by total, and then scale them back up again.
@@ -77,7 +50,7 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 	/**
 	 * Takes the union of this interval and another interval, assuming maximum number of positives are joined.
 	 */
-	fun union(other : EvidenceInterval, unionSize : Double = 1.0) : EvidenceInterval{
+	fun union(other : EvidenceInterval, unionSize : Double = 1.0) : EvidenceInterval {
 		//TODO: Figure out a way to find the total number of occurances across instances instead of passing it in as param.
 		//NOTE: These calculations are based off of intuitionistic fuzzy set theory, a good paper on which is here:
 		//https://www.irit.fr/~Didier.Dubois/Papers/cloudeus.pdf
@@ -101,7 +74,7 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 	 *	Skepticism is the minimum amount of correlation needed
 	 *	MinEvidence is the mimimum amount of evidence needed
 	 */
-	fun toTruthValue(skepticism: Double, minEvidence : Double) : TruthValue{
+	fun toTruthValue(skepticism: Double, minEvidence : Double) : TruthValue {
 		if(Math.abs(correlation()) < skepticism || evidence() < minEvidence){
 			return TruthValue.UNKNOWN
 		}
@@ -109,6 +82,11 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 			return if(correlation() > 0) TruthValue.TRUE else if(correlation() < 0) TruthValue.FALSE else TruthValue.UNKNOWN
 		}
 	}
+
+	override fun toString() : String {
+		return "(P=$positive, N=$negative, T=$total)"
+	}
+
 
 	companion object {
 		val EMPTY = EvidenceInterval(0, 0, 0)

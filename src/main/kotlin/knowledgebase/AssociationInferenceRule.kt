@@ -1,16 +1,19 @@
 package main.kotlin.knowledgebase
 
+import main.kotlin.commons.EvidenceInterval
+import main.kotlin.commons.InferenceRule
 import net.sf.tweety.logics.fol.syntax.Conjunction
+import net.sf.tweety.logics.fol.syntax.Disjunction
 import net.sf.tweety.logics.fol.syntax.FolFormula
 import net.sf.tweety.logics.fol.syntax.Implication
 
 class AssociationInferenceRule(val antecedent : Conjunction,
-							   val consequent : Conjunction,
+							   val consequent : Disjunction,
 							   val support : EvidenceInterval,
 							   val confidence : EvidenceInterval) : //Resulting Formula : pA ^ !nA -> pC ^ !nC
-		InferenceRule(Implication(antecedent, consequent), support){
+		InferenceRule<FolFormula>(Implication(antecedent, consequent), support){
 	constructor(antecedent: FolFormula, consequent: FolFormula, support : EvidenceInterval, confidence: EvidenceInterval):
-			this(Conjunction(setOf(antecedent)), Conjunction(setOf(consequent)), support, confidence)
+			this(Conjunction(setOf(antecedent)), Disjunction(setOf(consequent)), support, confidence)
 
 	override fun equals(other: Any?): Boolean {
 		if (this === other) return true

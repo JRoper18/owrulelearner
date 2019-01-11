@@ -1,4 +1,4 @@
-package main.kotlin.knowledgebase
+package main.kotlin.commons
 
 enum class TruthValue {
 	TRUE,
@@ -12,7 +12,7 @@ enum class TruthValue {
 			UNKNOWN -> return UNKNOWN
 		}
 	}
-	fun toConfidenceMeasure(evidenceSize : Double) : EvidenceInterval{
+	fun toConfidenceMeasure(evidenceSize : Double) : EvidenceInterval {
 		when(this){
 			TRUE -> return EvidenceInterval(evidenceSize, 0.0, evidenceSize)
 			FALSE -> return EvidenceInterval(0.0, evidenceSize, evidenceSize)
@@ -21,7 +21,7 @@ enum class TruthValue {
 	}
 
 	companion object {
-		fun fromBool(bool : Boolean?) : TruthValue{
+		fun fromBool(bool : Boolean?) : TruthValue {
 			if(bool == null){
 				return UNKNOWN
 			}

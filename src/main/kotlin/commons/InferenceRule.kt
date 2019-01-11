@@ -1,13 +1,11 @@
-package main.kotlin.knowledgebase
+package main.kotlin.commons
 
-import net.sf.tweety.commons.Formula
-
-open class InferenceRule(val formula : Formula, val evidence : EvidenceInterval){
+open class InferenceRule<T>(val formula : T, val evidence : EvidenceInterval){
 	override fun equals(other: Any?): Boolean {
 		if (this === other) return true
 		if (javaClass != other?.javaClass) return false
 
-		other as InferenceRule
+		other as InferenceRule<T>
 
 		if (formula != other.formula) return false
 		if (evidence != other.evidence) return false
@@ -16,7 +14,7 @@ open class InferenceRule(val formula : Formula, val evidence : EvidenceInterval)
 	}
 
 	override fun hashCode(): Int {
-		var result = formula.hashCode()
+		var result = formula!!.hashCode()
 		result = 31 * result + evidence.hashCode()
 		return result
 	}
