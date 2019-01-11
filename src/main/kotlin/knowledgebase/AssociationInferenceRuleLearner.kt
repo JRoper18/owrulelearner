@@ -7,7 +7,7 @@ import net.sf.tweety.logics.fol.syntax.*
 import java.lang.IllegalArgumentException
 import java.util.*
 
-class AssociationInferenceRuleLearner(config : AssociationInferenceRuleLearnerConfig, rules : Set<AssociationInferenceRule> = setOf()) : InferenceRuleLearner<FolFormula>(config, rules){
+class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerConfig, rules : Set<AssociationInferenceRule> = setOf()) : InferenceRuleLearner<FolFormula>(aConfig, rules){
 	override fun testRule(rule: FolFormula, instances: Set<Instance<FolFormula>>) : Map<Set<InferenceRule<FolFormula>>, AssociationInferenceRule> {
 		if (rule is Implication) {
 			val antecedent = rule.formulas.first as FolFormula
@@ -35,7 +35,8 @@ class AssociationInferenceRuleLearner(config : AssociationInferenceRuleLearnerCo
 			throw IllegalArgumentException("This rule learner only deals with association inference rules of the form (X => Y). ")
 		}
 	}
-	override fun findRules(instances: Set<Instance<FolFormula>>): Map<Set<InferenceRule<FolFormula>>, RuleDatabase<FolFormula>> {
+	override fun findRules(instances: Set<Instance<FolFormula>>): AssociationRuleDatabase {
+		val database = AssociationRuleDatabase()
 		if(config.target != null && config.target is FolFormula){
 			val dontAppendToAntecedent = mutableSetOf<FOLAtom>()
 			dontAppendToAntecedent.addAll(config.target.atoms.toSet() as Set<FOLAtom>)
@@ -43,46 +44,54 @@ class AssociationInferenceRuleLearner(config : AssociationInferenceRuleLearnerCo
 			//Also, we want to try all "forall" rules.
 			val sig = (instances.first() as TweetyFolInstance).parser.signature
 			val vars = config.target.unboundVariables
-			//We're doing apriori, general-to-specific, which means starting with the simplest rule possible.
-			val generatedRules : MutableMap<Set<InferenceRule<FolFormula>>, MutableSet<InferenceRule<FolFormula>>> = mutableMapOf()
+			//We're doing apriori, general-to-specific, which means starting with the simplest rule possible: Null itemset.
 			testRule(Implication(Tautology(), config.target), instances).forEach { rulesUsed, genedNullRule ->
-				generatedRules.put(rulesUsed, mutableSetOf(genedNullRule))
+				database.addRule(rulesUsed as Set<AssociationInferenceRule>, genedNullRule)
 			}
-			//Now do single rules
-			val frequentItemsets = mutableSetOf(sortedSetOf<FOLAtom>(Comparator { o1, o2 ->
-				o1.toString().compareTo(o2.toString())
-			}))
-			val frequentItemsetsForEvidence : Map<Set<InferenceRule<FolFormula>>, MutableSet<TreeSet<FOLAtom>>> = mutableMapOf()
-			val firstLvlFormulas = (generateSupersetFormulas(Conjunction(), dontAppendToAntecedent, sig.predicates, vars))
-			for(firstLvlFormula in firstLvlFormulas){
-				val firstLvlRules = testRule(Implication(firstLvlFormula, config.target), instances)
-				firstLvlRules.forEach { rulesUsed, resultingRule ->
-					if(generatedRules.containsKey(rulesUsed)){
-						generatedRules.get(rulesUsed)!!.add(resultingRule)
-					}
-					else {
-						generatedRules.put(rulesUsed, mutableSetOf(resultingRule))
+			//Now do single-item rules
+			val firstLevelLiterals = generateBaseFormulas(dontAppendToAntecedent, sig.predicates, vars)
+
+
+		}
+		return database
+	}
+	fun makeNextLevelItemsets(previousLevel : Collection<TreeSet<FOLLiteral>>, database : AssociationRuleDatabase, instances : Set<TweetyFolInstance>) : LinkedList<TreeSet<FOLLiteral>>{
+		//Now, do F_k-1 X F_k-1 merging to find frequent itemsets.
+		val frequent = LinkedList<TreeSet<FOLLiteral>>()
+		previousLevel.forEach { atomList1 ->
+			previousLevel.forEach { atomList2 ->
+				val size = atomList1.size
+				if(atomList1 != atomList2){
+					val sub1 = atomList1.headSet(atomList1.last())
+					val sub2 = atomList2.headSet(atomList2.last())
+					if(sub1.equals(sub2)){
+						//Because the sets are sorted, if the first size-1 elements of both frequent itemsets are equal, their combination is frequent!
+						val newItemset = TreeSet<FOLLiteral>(sub1)
+						newItemset.add(atomList2.last())
+						val itemsetFreq = countTotal(makeFormulaFromLiterals(newItemset), instances)
+						val supportInterval = config as AssociationInferenceRuleLearnerConfig //Smart cast.
+						itemsetFreq.forEach { assumptions, support ->
+							val realSup = support.positiveInterval()
+							if(realSup.lowerBound > config.supportInterval.lowerBound && realSup.upperBound > config.supportInterval.upperBound){
+								//Passes support test!
+								frequent.add(newItemset)
+							}
+						}
 					}
 				}
 			}
-			//Now, do F_k-1 X F_k-1 merging to find frequent itemsets.
-
-			
 		}
-		return mapOf()
-
+		return frequent
 	}
-
-	fun generateSupersetFormulas(current : Conjunction, infrequent : Set<FOLAtom>, predicates : Set<Predicate>, variables : Set<Variable>) : List<Conjunction>{
-		val supersetFormulas = mutableListOf<Conjunction>()
+	fun generateBaseFormulas(disclude : Set<FOLAtom>, predicates : Set<Predicate>, variables : Set<Variable>) : List<FOLLiteral>{
+		val supersetFormulas = mutableListOf<FOLLiteral>()
 		for(pred in predicates){
 			val lists = makeVariableList(variables, pred.arity)
 			for(varList in lists){
 				val newAtom = FOLAtom(pred, varList)
-				if(!infrequent.contains(newAtom)){
-					val clone = current.clone()
-					clone.formulas.add(newAtom)
-					supersetFormulas.add(clone)
+				if(!disclude.contains(newAtom)){
+					supersetFormulas.add(FOLLiteral(newAtom, true))
+					supersetFormulas.add(FOLLiteral(newAtom, false))
 				}
 			}
 		}
@@ -100,6 +109,19 @@ class AssociationInferenceRuleLearner(config : AssociationInferenceRuleLearnerCo
 			}
 		}
 		return newLists.toList()
+	}
+
+	fun makeFormulaFromLiterals(literals : Collection<FOLLiteral>): Conjunction {
+		val formula = Conjunction()
+		literals.forEach {
+			if(it.neg){
+				formula.add(Negation(it.atom))
+			}
+			else{
+				formula.add(it.atom)
+			}
+		}
+		return formula
 	}
 
 }
