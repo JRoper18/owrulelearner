@@ -10,7 +10,7 @@ import net.sf.tweety.logics.fol.syntax.Implication
 class AssociationInferenceRule(val antecedent : Conjunction,
 							   val consequent : Disjunction,
 							   val support : EvidenceInterval,
-							   val confidence : EvidenceInterval) : //Resulting Formula : pA ^ !nA -> pC ^ !nC
+							   val confidence : EvidenceInterval) : //Resulting Formula : ante => conse
 		InferenceRule<FolFormula>(Implication(antecedent, consequent), support){
 	constructor(antecedent: FolFormula, consequent: FolFormula, support : EvidenceInterval, confidence: EvidenceInterval):
 			this(Conjunction(setOf(antecedent)), Disjunction(setOf(consequent)), support, confidence)

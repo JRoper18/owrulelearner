@@ -4,7 +4,7 @@ import net.sf.tweety.commons.Formula
 import net.sf.tweety.logics.fol.syntax.FolFormula
 
 abstract class InferenceRuleLearner<T : Formula>(val config : InferenceRuleLearnerConfig<T>, val rules : Set<InferenceRule<T>> = setOf()) {
-	abstract fun findRules(instances: Set<Instance<T>>): Map<Set<InferenceRule<T>>, RuleDatabase<FolFormula>>
+	abstract fun findRules(instances: Set<Instance<T>>): RuleDatabase<out T, out InferenceRule<T>>
 	open fun testRule(rule : T, instances : Set<Instance<T>>) : Map<Set<InferenceRule<T>>, InferenceRule<T>> {
 		val intervals = countTotal(rule, instances)
 		val passedRules = mutableMapOf<Set<InferenceRule<T>>, InferenceRule<T>>()

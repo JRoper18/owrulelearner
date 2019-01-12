@@ -1,7 +1,9 @@
 package main.kotlin.commons
 
 import net.sf.tweety.math.Interval
+import net.sf.tweety.math.probability.Probability
 import java.lang.IllegalArgumentException
+import kotlin.math.max
 
 data class EvidenceInterval(val positive : Double, val negative : Double, val total : Double) {
 	constructor(positive : Int, negative : Int, total : Int) : this(positive + 0.0, negative + 0.0, total + 0.0)
@@ -22,6 +24,13 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 		val res = (positive - negative) / total
 		return res
 	}
+	fun minCorrelation() : Double {
+		return (positive + unknown() - negative) / total
+	}
+	fun maxCorrelation() : Double {
+		return (positive - negative - unknown()) / total
+	}
+
 	fun evidence() : Double {
 		return positive + negative
 	}
@@ -68,6 +77,12 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 	}
 	fun negativeInterval() : Interval<Double> {
 		return Interval(negative, negative + unknown())
+	}
+	fun correlationInterval() : Interval<Double> {
+		return Interval(minCorrelation(), maxCorrelation())
+	}
+	fun probabilityInterval() : Interval<Probability> {
+		return Interval(Probability(positive / total), Probability((positive + unknown()) / total))
 	}
 	/**
 	 *	Returns a truth-value simplification of this evidence measure.

@@ -12,11 +12,9 @@ internal class AssociationFolInferenceRuleLearnerTest {
 	@Test
 	fun testCompleteSimpleRuleTesting() {
 		val parser = FolParser()
-		val learner = AssociationInferenceRuleLearner(AssociationInferenceRuleLearnerConfig(Interval(0.0, 0.0), Interval(0.0, 0.0)))
-
+		val learner = AssociationInferenceRuleLearner(AssociationInferenceRuleLearnerConfig())
 		parser.signature = parser.parseSignature("Thing = {bread, milk, diapers, beer, eggs, cola}" +
 													"\ntype(bought(Thing))")
-		parser.signature.addSignature(FolSignature(true))
 		val pBread = parser.parseFormula("bought(bread)") as FolFormula
 		val pMilk = parser.parseFormula("bought(milk)") as FolFormula
 		val pDiapers = parser.parseFormula("bought(diapers)") as FolFormula
@@ -51,7 +49,6 @@ internal class AssociationFolInferenceRuleLearnerTest {
 
 		parser.signature = parser.parseSignature("Thing = {bread, milk, diapers, beer, eggs, cola}" +
 				"\ntype(bought(Thing))")
-		parser.signature.addSignature(FolSignature(true))
 		val pBread = parser.parseFormula("bought(bread)") as FolFormula
 		val pMilk = parser.parseFormula("bought(milk)") as FolFormula
 		val pDiapers = parser.parseFormula("bought(diapers)") as FolFormula
@@ -70,9 +67,9 @@ internal class AssociationFolInferenceRuleLearnerTest {
 		val i5 = TweetyFolInstance(parser, FolBeliefSet(setOf(pBread, pMilk, (pDiapers), Negation(pBeer),
 				(pEggs), Negation(pCola))))
 
-		val rule1 = AssociationInferenceRule(pBread, pMilk, EvidenceInterval.EMPTY, EvidenceInterval.EMPTY)
-		val resultRule1 = learner.testRule(Implication(pBread, pMilk), setOf(i1, i2, i3, i4, i5)).get(setOf())!! as AssociationInferenceRule
+		val resultRule1 = learner.testRule(Implication(pBread, pMilk), setOf(i1, i2, i3, i4, i5)).get(setOf())!!
 		assertEquals(EvidenceInterval(1, 2, 5), resultRule1.support)
 		assertEquals(EvidenceInterval(1, 1, 4), resultRule1.confidence)
+		println(learner.findRules(setOf(i1, i2, i3, i4, i5)))
 	}
 }
