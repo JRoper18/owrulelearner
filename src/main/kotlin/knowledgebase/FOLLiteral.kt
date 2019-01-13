@@ -1,6 +1,8 @@
 package main.kotlin.knowledgebase
 
 import net.sf.tweety.logics.fol.syntax.FOLAtom
+import net.sf.tweety.logics.fol.syntax.FolFormula
+import net.sf.tweety.logics.fol.syntax.Negation
 
 data class FOLLiteral(val atom : FOLAtom, val neg : Boolean) : Comparable<FOLLiteral> {
 	override fun compareTo(other: FOLLiteral): Int {
@@ -15,6 +17,12 @@ data class FOLLiteral(val atom : FOLAtom, val neg : Boolean) : Comparable<FOLLit
 			return "!" + atom.toString()
 		}
 		return atom.toString()
+	}
+	fun toFormula() : FolFormula {
+		if(neg){
+			return Negation(atom)
+		}
+		return atom
 	}
 
 

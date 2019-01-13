@@ -6,7 +6,7 @@ import java.lang.IllegalArgumentException
 import kotlin.math.max
 
 data class EvidenceInterval(val positive : Double, val negative : Double, val total : Double) {
-	constructor(positive : Int, negative : Int, total : Int) : this(positive + 0.0, negative + 0.0, total + 0.0)
+	constructor(positive : Number, negative : Number, total : Number) : this(positive.toDouble(), negative.toDouble(), total.toDouble())
 	init {
 		if(positive < 0 || negative < 0 || total < 0){
 			//Not valid, positive reals ONLY.
@@ -34,11 +34,11 @@ data class EvidenceInterval(val positive : Double, val negative : Double, val to
 	fun evidence() : Double {
 		return positive + negative
 	}
-	fun scale(scalar : Double) : EvidenceInterval {
-		return EvidenceInterval(positive * scalar, negative * scalar, total * scalar)
+	fun scale(scalar : Number) : EvidenceInterval {
+		return EvidenceInterval(positive * scalar.toDouble(), negative * scalar.toDouble(), total * scalar.toDouble())
 	}
-	fun normalize(toVal : Double = 1.0) : EvidenceInterval {
-		return scale(toVal / total)
+	fun normalize(toVal : Number = 1.0) : EvidenceInterval {
+		return scale(toVal.toDouble() / total)
 	}
 	fun add(interval : EvidenceInterval) : EvidenceInterval {
 		return EvidenceInterval(positive + interval.positive, negative + interval.negative, total + interval.total)

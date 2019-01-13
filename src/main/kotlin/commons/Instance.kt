@@ -1,6 +1,8 @@
 package main.kotlin.commons
 
+import net.sf.tweety.commons.BeliefBase
 import net.sf.tweety.commons.Formula
+import net.sf.tweety.commons.Parser
 
 interface Instance<T : Formula> {
 	fun query(query : T) : TruthValue
@@ -19,5 +21,10 @@ interface Instance<T : Formula> {
 	 */
 	fun count(query : T) : EvidenceInterval
 
-
+	/**
+	 * The "size" of the instance, or how many times count can check for something.
+	 * - In FOL, it's the number of possible constants.
+	 * - In propositional logic, it's 1.
+	 */
+	fun size() : Int
 }

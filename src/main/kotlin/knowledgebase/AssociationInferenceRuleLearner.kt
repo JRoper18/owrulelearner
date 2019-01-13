@@ -4,6 +4,8 @@ import main.kotlin.commons.*
 import main.kotlin.util.compareTo
 import net.sf.tweety.logics.commons.syntax.Predicate
 import net.sf.tweety.logics.commons.syntax.Variable
+import net.sf.tweety.logics.commons.syntax.interfaces.Term
+import net.sf.tweety.logics.fol.parser.FolParser
 import net.sf.tweety.logics.fol.syntax.*
 import net.sf.tweety.math.probability.Probability
 import java.lang.IllegalArgumentException
@@ -38,16 +40,27 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 		}
 	}
 	override fun findRules(instances: Set<Instance<FolFormula>>): AssociationRuleDatabase {
-		val database = AssociationRuleDatabase()
+		var sampleSize = 0
+		val parser = (instances.first() as TweetyFolInstance).parser
+		val sig = parser.signature
+		for(instance in instances){
+			if(instance !is TweetyFolInstance){
+				throw IllegalArgumentException("Only works with Tweety FOL instances (for now). ")
+			}
+			if(!instance.parser.signature.predicates.equals(sig.predicates)){
+				throw IllegalArgumentException("Instances must share predicates. ")
+			}
+			//Get the total number of constants.
+			sampleSize += instance.size()
+		}
+		val database = AssociationRuleDatabase(sampleSize)
 		//Assume all instances share at least the functions and predicates in their signature.
-		//Also, we want to try all "forall" rules.
-		val sig = (instances.first() as TweetyFolInstance).parser.signature
-		val vars = setOf<Variable>(Variable("X"), Variable("Y"), Variable("Z")) //Anything that has more than 3 variables is too complicated to be important probably.
-		//We're doing apriori, general-to-specific, which means starting with the simplest rule possible: null rules and single-item itemset.
-		val firstLevelLiterals = generateBaseFormulas(sig.predicates, vars)
-		println(firstLevelLiterals)
-		var frequentItemsets = mutableMapOf<Set<AssociationInferenceRule>, MutableSet<TreeSet<FOLLiteral>>>()
+		//Also, we only want to try all "forall" rules. Only generics.
 		val conf = config as AssociationInferenceRuleLearnerConfig
+
+		//We're doing apriori, general-to-specific, which means starting with the simplest rule possible: null rules and single-item itemset.
+		val firstLevelLiterals = generateBaseFormulas(sig)
+		var frequentItemsets = mutableMapOf<Set<AssociationInferenceRule>, MutableSet<TreeSet<FOLLiteral>>>()
 		for(literal in firstLevelLiterals){
 			val formula = makeFormulaFromLiterals(listOf(literal))
 			val testedFormula = countTotal(formula, instances)
@@ -76,39 +89,40 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 			}
 			frequentItemsets = nextLevelItemsets //Replace our frequent itemsets with the frequent itemsets of next level.
 		}
+
 		/*By now we've generated all frequent itemsets for each set of possible assumptions. Probably took years to finish if we're lucky.
 		Now, we must calculate confidences and filter them. The equation for confidence for uncertain datasets like this is another interval.
 		For a rule X => Y, P = minCount(X^Y), N=minCount(X^!Y), T=maxCount(X)
 		We know X^Y because it was frequent, and X for the same reason. We may know X^!Y if it's frequent, but maybe not.
 		*/
-		database.forEachItemset{ assumptions, itemset ->
+		val itemsetIterator = database.itemsetIterator()
+		itemsetIterator.forEach{ entry->
+			val assumptions = entry.key.first
+			val itemset = entry.key.second
+			println("ITEMSET: " + itemset)
 			//Iterate through each item of the itemset and make it the consequent.
 			itemset.forEach { consequent ->
 				val clone = TreeSet(itemset)
-				println(clone)
-				println(assumptions)
-				println(database)
-				val minimumPositives = database.getSupport(assumptions, clone)!!.positive
+				val support = database.getSupport(assumptions, clone)!!
+				val minimumPositives = support.positive
 				clone.remove(consequent)
 				val maxPossibleTotal = database.getSupport(assumptions, clone)!!.positiveInterval().upperBound
 				clone.add(consequent.not())
 				var minimumNegatives = database.getSupport(assumptions, clone)?.positive
-				if(minimumNegatives == null) {
+				if (minimumNegatives == null) {
 					val negativeExamples = countTotal(makeFormulaFromLiterals(clone), instances)
-					negativeExamples.forEach { assumptions, evidence ->
-						database.addSupport(assumptions as Set<AssociationInferenceRule>, clone, evidence) //Add it for future use.
-					}
 					if (negativeExamples.containsKey(assumptions)) {
 						minimumNegatives = negativeExamples.get(assumptions)!!.positive
-						val confidenceInterval = EvidenceInterval(minimumPositives, minimumNegatives, maxPossibleTotal)
-						val confidenceProbability = confidenceInterval.probabilityInterval()
-						if (confidenceProbability.lowerBound > config.confidenceInterval.lowerBound && confidenceProbability.upperBound > config.confidenceInterval.upperBound) {
-							//Passes confidence tests!
-							clone.remove(consequent)
-							database.addConfidence(assumptions, clone, consequent, confidenceInterval)
-						}
-					} else {
-						//No assumptions lead here, so we have to discard the data. SAD!
+					}
+				}
+				if(minimumNegatives != null){ //If we could calculate a value, use that value.
+					val confidenceInterval = EvidenceInterval(minimumPositives, minimumNegatives, maxPossibleTotal)
+					val confidenceProbability = confidenceInterval.probabilityInterval()
+					if (confidenceProbability.lowerBound > config.confidenceInterval.lowerBound && confidenceProbability.upperBound > config.confidenceInterval.upperBound) {
+						//Passes confidence tests!
+						clone.remove(consequent.not())
+						database.addConfidence(assumptions, clone, consequent, confidenceInterval)
+						database.addRule(assumptions, AssociationInferenceRule(makeFormulaFromLiterals(clone), consequent.toFormula(), support, confidenceInterval))
 					}
 				}
 			}
@@ -125,10 +139,9 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 				if(atomList1 != atomList2){
 					val sub1 = atomList1.headSet(atomList1.last())
 					val sub2 = atomList2.headSet(atomList2.last())
-					if(sub1.equals(sub2) && !atomList2.last().not().equals(atomList1.last())){
+					if(sub1.equals(sub2) && !atomList2.last().atom.equals(atomList1.last().atom)){
 						//Because the sets are sorted, if the first size-1 elements of both frequent itemsets are equal, their combination is frequent!
 						//Also, we don't want X^!X in a literal set. It's redundant.
-
 						val newItemset = TreeSet<FOLLiteral>(atomList1)
 						newItemset.add(atomList2.last())
 						val itemsetFreq = countTotal(makeFormulaFromLiterals(newItemset), instances)
@@ -146,10 +159,10 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 		}
 		return frequent
 	}
-	fun generateBaseFormulas(predicates : Set<Predicate>, variables : Set<Variable>, disclude : Set<FOLAtom> = setOf()) : List<FOLLiteral>{
+	fun generateBaseFormulas(sig : FolSignature, disclude : Set<FOLAtom> = setOf()) : List<FOLLiteral>{
 		val supersetFormulas = mutableListOf<FOLLiteral>()
-		for(pred in predicates){
-			val lists = makeVariableList(variables, pred.arity)
+		for(pred in sig.predicates){
+			val lists = makeTermList(sig.constants as Set<Term<Any>>, pred.arity)
 			for(varList in lists){
 				val newAtom = FOLAtom(pred, varList)
 				if(!disclude.contains(newAtom)){
@@ -160,29 +173,32 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 		}
 		return supersetFormulas.toList()
 	}
-	fun makeVariableList(variables : Set<Variable>, arity : Int) : List<List<Variable>> {
+	fun makeTermList(terms : Collection<Term<Any>>, arity : Int) : List<List<Term<Any>>> {
 		if(arity == 0){
 			return listOf(listOf())
 		}
-		val shorterLists = makeVariableList(variables, arity - 1)
-		val newLists = mutableListOf<List<Variable>>()
+		val shorterLists = makeTermList(terms, arity - 1)
+		val newLists = mutableListOf<List<Term<Any>>>()
 		for(list in shorterLists){
-			for(variable in variables){
-				newLists.add(list + variable)
+			for(term in terms){
+				newLists.add(list + term)
 			}
 		}
+
 		return newLists.toList()
 	}
 
-	fun makeFormulaFromLiterals(literals : Collection<FOLLiteral>): Conjunction {
+	fun makeFormulaFromLiterals(literals : Collection<FOLLiteral>): FolFormula {
+		if(literals.isEmpty()){
+			return Tautology()
+		}
+		else if(literals.size == 1){
+			val literal = literals.first()
+			return literal.toFormula()
+		}
 		val formula = Conjunction()
 		literals.forEach {
-			if(it.neg){
-				formula.add(Negation(it.atom))
-			}
-			else{
-				formula.add(it.atom)
-			}
+			formula.add(it.toFormula()) //The reason I have to directly parse formulas is that variables are cheked for reference equality during reasoning.
 		}
 		return formula
 	}

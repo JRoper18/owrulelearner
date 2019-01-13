@@ -5,7 +5,7 @@ import main.kotlin.commons.RuleDatabase
 import net.sf.tweety.logics.fol.syntax.FolFormula
 import java.util.*
 
-class AssociationRuleDatabase(assumptionsToRules : MutableMap<Set<AssociationInferenceRule>, MutableSet<AssociationInferenceRule>> = mutableMapOf()) : RuleDatabase<FolFormula, AssociationInferenceRule>(assumptionsToRules)  {
+class AssociationRuleDatabase(sampleSize : Int, assumptionsToRules : MutableMap<Set<AssociationInferenceRule>, MutableSet<AssociationInferenceRule>> = mutableMapOf()) : RuleDatabase<FolFormula, AssociationInferenceRule>(sampleSize, assumptionsToRules)  {
 	private val itemsetSupports : MutableMap<Pair<Set<AssociationInferenceRule>, TreeSet<FOLLiteral>>, EvidenceInterval> = mutableMapOf()
 	private val ruleConfidences : MutableMap<Triple<Set<AssociationInferenceRule>, TreeSet<FOLLiteral>, FOLLiteral>, EvidenceInterval> = mutableMapOf()
 	fun addSupport(assumptions : Set<AssociationInferenceRule>, itemset : TreeSet<FOLLiteral>, interval : EvidenceInterval) {
@@ -23,20 +23,26 @@ class AssociationRuleDatabase(assumptionsToRules : MutableMap<Set<AssociationInf
 		}
 	}
 	fun getSupport(assumptions: Set<AssociationInferenceRule>, itemset : TreeSet<FOLLiteral>) : EvidenceInterval? {
+		if(itemset.isEmpty()){ //Null set is a tautology.
+			return EvidenceInterval.POSITIVE.scale(sampleSize)
+		}
 		return itemsetSupports.get(Pair(assumptions, itemset))
 	}
 	fun getConfidence(assumptions: Set<AssociationInferenceRule>, antecedent : TreeSet<FOLLiteral>, consequent : FOLLiteral) : EvidenceInterval? {
+		if(antecedent.isEmpty()){ //Null antecedent is tautology => consequent.
+			return getSupport(assumptions, sortedSetOf(consequent))
+		}
 		return ruleConfidences.get(Triple(assumptions, antecedent, consequent))
 	}
-	fun forEachItemset(forEach : (assumptions: Set<AssociationInferenceRule>, itemset : TreeSet<FOLLiteral>) -> Unit){
-		itemsetSupports.forEach { a, u ->
-			forEach(a.first, a.second)
-		}
+	fun itemsetIterator() : Iterator<Map.Entry<Pair<Set<AssociationInferenceRule>, TreeSet<FOLLiteral>>, EvidenceInterval>>{
+		return itemsetSupports.iterator()
 	}
 
 	override fun toString() : String{
 		return itemsetSupports.toString()
 	}
-
+	fun size() : Int {
+		return ruleConfidences.size
+	}
 
 }

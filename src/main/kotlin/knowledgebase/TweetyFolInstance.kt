@@ -95,4 +95,8 @@ class TweetyFolInstance(val parser : FolParser, val beliefSet: FolBeliefSet) : I
 	fun infer(queryStr: String, rules : Set<InferenceRule<FolFormula>>, inferenceDepth: Int = 1) : Map<Set<InferenceRule<FolFormula>>, EvidenceInterval>{
 		return infer(parser.parseFormula(queryStr) as FolFormula, rules, inferenceDepth)
 	}
+
+	override fun size() : Int {
+		return parser.signature.constants.size
+	}
 }

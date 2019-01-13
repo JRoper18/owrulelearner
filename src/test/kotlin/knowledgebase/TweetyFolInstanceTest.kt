@@ -63,7 +63,7 @@ internal class TweetyFolInstanceTest {
 	@Test
 	fun testCount(){
 		assertEquals(EvidenceInterval(1, 1, 2), i1.count("(isApple(X) && isRed(X))"))
-		assertEquals(EvidenceInterval(1, 1, 2), i2.count("(isApple(X) && isRed(X))"))
+		assertEquals(EvidenceInterval(1, 1, 2), i2.count("(isApple(Y) && isRed(Y))"))
 		assertEquals(EvidenceInterval(1, 0, 2), i2.count("(isApple(X) || isRed(X))"))
 
 	}
