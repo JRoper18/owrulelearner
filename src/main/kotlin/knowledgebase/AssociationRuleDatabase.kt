@@ -37,6 +37,9 @@ class AssociationRuleDatabase(sampleSize : Int, assumptionsToRules : MutableMap<
 	fun itemsetIterator() : Iterator<Map.Entry<Pair<Set<AssociationInferenceRule>, TreeSet<FOLLiteral>>, EvidenceInterval>>{
 		return itemsetSupports.iterator()
 	}
+	fun ruleIterator() : Iterator<Map.Entry<Triple<Set<AssociationInferenceRule>, TreeSet<FOLLiteral>, FOLLiteral>, EvidenceInterval>> {
+		return ruleConfidences.iterator()
+	}
 
 	override fun toString() : String{
 		return itemsetSupports.toString()

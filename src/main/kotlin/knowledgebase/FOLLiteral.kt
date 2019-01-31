@@ -8,7 +8,9 @@ data class FOLLiteral(val atom : FOLAtom, val neg : Boolean) : Comparable<FOLLit
 	override fun compareTo(other: FOLLiteral): Int {
 		return this.toString().compareTo(other.toString())
 	}
-
+	fun isGround() : Boolean {
+		return atom.isGround
+	}
 	fun not() : FOLLiteral{
 		return FOLLiteral(atom, !neg)
 	}
@@ -24,6 +26,4 @@ data class FOLLiteral(val atom : FOLAtom, val neg : Boolean) : Comparable<FOLLit
 		}
 		return atom
 	}
-
-
 }

@@ -2,12 +2,11 @@ package main.kotlin.knowledgebase
 
 import main.kotlin.commons.*
 import main.kotlin.util.compareTo
-import net.sf.tweety.logics.commons.syntax.Predicate
+import net.sf.tweety.commons.Formula
+import net.sf.tweety.logics.commons.syntax.Constant
 import net.sf.tweety.logics.commons.syntax.Variable
 import net.sf.tweety.logics.commons.syntax.interfaces.Term
-import net.sf.tweety.logics.fol.parser.FolParser
 import net.sf.tweety.logics.fol.syntax.*
-import net.sf.tweety.math.probability.Probability
 import java.lang.IllegalArgumentException
 import java.util.*
 
@@ -48,16 +47,26 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 				throw IllegalArgumentException("Only works with Tweety FOL instances (for now). ")
 			}
 			if(!instance.parser.signature.predicates.equals(sig.predicates)){
-				throw IllegalArgumentException("Instances must share predicates. ")
-			}
+				throw IllegalArgumentException("Signature predicates should be the same!")
+ 			}
 			//Get the total number of constants.
 			sampleSize += instance.size()
 		}
 		val database = AssociationRuleDatabase(sampleSize)
+		findConstantRules(instances, database)
+		//Now from the constant rules, turn them into variable-bound rules.
+		val ruleIterator = database.ruleIterator()
+
+		ruleIterator.forEachRemaining {
+
+		}
+		return database
+	}
+	fun findConstantRules(instances: Set<Instance<FolFormula>>, database : AssociationRuleDatabase) {
 		//Assume all instances share at least the functions and predicates in their signature.
 		//Also, we only want to try all "forall" rules. Only generics.
 		val conf = config as AssociationInferenceRuleLearnerConfig
-
+		val sig = (instances.first() as TweetyFolInstance).parser.signature
 		//We're doing apriori, general-to-specific, which means starting with the simplest rule possible: null rules and single-item itemset.
 		val firstLevelLiterals = generateBaseFormulas(sig)
 		var frequentItemsets = mutableMapOf<Set<AssociationInferenceRule>, MutableSet<TreeSet<FOLLiteral>>>()
@@ -127,9 +136,8 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 				}
 			}
 		}
-		return database
 	}
-	fun makeNextLevelItemsets(previousLevel : Set<TreeSet<FOLLiteral>>, database : AssociationRuleDatabase, instances : Set<Instance<FolFormula>>) : MutableSet<TreeSet<FOLLiteral>>{
+	private fun makeNextLevelItemsets(previousLevel : Set<TreeSet<FOLLiteral>>, database : AssociationRuleDatabase, instances : Set<Instance<FolFormula>>) : MutableSet<TreeSet<FOLLiteral>>{
 		val conf = config as AssociationInferenceRuleLearnerConfig //Smart cast.
 		//Now, do F_k-1 X F_k-1 merging to find frequent itemsets.
 		val frequent = mutableSetOf<TreeSet<FOLLiteral>>()
@@ -141,7 +149,7 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 					val sub2 = atomList2.headSet(atomList2.last())
 					if(sub1.equals(sub2) && !atomList2.last().atom.equals(atomList1.last().atom)){
 						//Because the sets are sorted, if the first size-1 elements of both frequent itemsets are equal, their combination is frequent!
-						//Also, we don't want X^!X in a literal set. It's redundant.
+						//Also, we don't want X^!X or X^X in a literal set. It's redundant.
 						val newItemset = TreeSet<FOLLiteral>(atomList1)
 						newItemset.add(atomList2.last())
 						val itemsetFreq = countTotal(makeFormulaFromLiterals(newItemset), instances)
@@ -159,10 +167,20 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 		}
 		return frequent
 	}
-	fun generateBaseFormulas(sig : FolSignature, disclude : Set<FOLAtom> = setOf()) : List<FOLLiteral>{
+	private fun generateBaseVariableFormulas(sig : FolSignature) : List<FOLLiteral> {
+		val literals = mutableListOf<FOLLiteral>()
+		for(predicate in sig.predicates){
+			for(varList in makeVariableList(predicate.arity)){
+				literals.add(FOLLiteral(FOLAtom(predicate, varList), true))
+				literals.add(FOLLiteral(FOLAtom(predicate, varList), false))
+			}
+		}
+		return literals
+	}
+	private fun generateBaseFormulas(sig : FolSignature, disclude : Set<FOLAtom> = setOf()) : List<FOLLiteral>{
 		val supersetFormulas = mutableListOf<FOLLiteral>()
 		for(pred in sig.predicates){
-			val lists = makeTermList(sig.constants as Set<Term<Any>>, pred.arity)
+			val lists = makeConstantList(sig.constants, pred.arity)
 			for(varList in lists){
 				val newAtom = FOLAtom(pred, varList)
 				if(!disclude.contains(newAtom)){
@@ -173,22 +191,98 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 		}
 		return supersetFormulas.toList()
 	}
-	fun makeTermList(terms : Collection<Term<Any>>, arity : Int) : List<List<Term<Any>>> {
+	private fun makeConstantList(terms : Collection<Constant>, arity : Int) : List<List<Constant>> {
 		if(arity == 0){
 			return listOf(listOf())
 		}
-		val shorterLists = makeTermList(terms, arity - 1)
-		val newLists = mutableListOf<List<Term<Any>>>()
+		val shorterLists = makeConstantList(terms, arity - 1)
+		val newLists = mutableListOf<List<Constant>>()
 		for(list in shorterLists){
 			for(term in terms){
 				newLists.add(list + term)
 			}
 		}
-
 		return newLists.toList()
 	}
+	private fun getPossibleVariables(arity : Int) : List<Variable> {
+		if(arity == 0){
+			return listOf()
+		}
+		val prev = getPossibleVariables(arity - 2)
+		val newVar : Variable;
+		if(arity <= 3){ //First x, y, z
+			newVar = Variable(((arity - 1) + 'X'.toInt()).toChar().toString())
+		}
+		else { //Then w, v, and backwards down the alphabet.
+			newVar = Variable(('W'.toInt() - arity - 3).toChar().toString())
+		}
+		return prev + newVar
+	}
 
-	fun makeFormulaFromLiterals(literals : Collection<FOLLiteral>): FolFormula {
+	/**
+	 * Given a list of atoms, check if all the variables in each atom "relate" to the atoms in the target set of atoms.
+	 * For example, the statement f(A) => p(B) doesn't relate, as A has no relation to B.
+	 * On the other hand, f(A, B) ^ g(B, C) => f(A, C). Even though B doesn't directly relate to A or C in the target, it relates to A
+	 * and C by being in the same predicate as A and C in the antecedent.
+	 */
+	private fun checkIfAtomsRelate(atoms : List<FOLAtom>, target : Set<FOLAtom>) : Boolean {
+		var relatedTerms = target.flatMap {
+			it.arguments
+		}.toMutableSet()
+		val uncheckedAtoms : MutableSet<FOLAtom> = atoms.toMutableSet()
+		var foundNewAtoms : Boolean = false
+		do {
+			val toRemove = mutableListOf<FOLAtom>()
+			for(atom in uncheckedAtoms){
+				for(arg in atom.arguments){
+					if(relatedTerms.contains(arg)){
+						relatedTerms.addAll(atom.arguments)
+						foundNewAtoms = true
+						toRemove.add(atom)
+						break
+					}
+				}
+			}
+			uncheckedAtoms.removeAll(toRemove)
+		} while(foundNewAtoms)
+		return uncheckedAtoms.isEmpty()
+	}
+	private fun turnGroundedFormulaIntoGeneral(groundedLiterals : TreeSet<FOLLiteral>) : TreeSet<FOLLiteral> {
+		val newLiterals = sortedSetOf<FOLLiteral>()
+		val groundsToVars = mutableMapOf<FOLAtom, Variable>()
+		val maxArity = groundedLiterals.size
+		val possibleVariables = getPossibleVariables(maxArity)
+		var currentUsedVarIndex = -1;
+		for(literal in groundedLiterals){
+			if(!literal.isGround()){
+				newLiterals.add(literal)
+			}
+			else{
+				val ungroundVar = groundsToVars.getOrPut(literal.atom, {possibleVariables[currentUsedVarIndex++]})
+				newLiterals.add(FOLLiteral(FOLAtom(literal.atom.predicate, ungroundVar), literal.neg))
+			}
+		}
+		return newLiterals
+	}
+	private fun makeVariableList(arity : Int) : List<List<Variable>>{
+		if(arity == 0){
+			return listOf(listOf())
+		}
+		if(variableLists[arity] != null){
+			return variableLists[arity]!!
+		}
+		val shorterLists = makeVariableList(arity - 1)
+		val newLists = mutableListOf<List<Variable>>()
+		val newVars = getPossibleVariables(arity)
+		for(list in shorterLists){
+			for(variable in newVars){
+				newLists.add(list + variable)
+			}
+		}
+		variableLists[arity] = newLists.toList()
+		return newLists.toList()
+	}
+	private fun makeFormulaFromLiterals(literals : Collection<FOLLiteral>): FolFormula {
 		if(literals.isEmpty()){
 			return Tautology()
 		}
@@ -198,11 +292,13 @@ class AssociationInferenceRuleLearner(aConfig : AssociationInferenceRuleLearnerC
 		}
 		val formula = Conjunction()
 		literals.forEach {
-			formula.add(it.toFormula()) //The reason I have to directly parse formulas is that variables are cheked for reference equality during reasoning.
+			formula.add(it.toFormula())
 		}
 		return formula
 	}
-
+	companion object {
+		val variableLists : MutableList<List<List<Variable>>?> = mutableListOf()
+	}
 }
 
 
